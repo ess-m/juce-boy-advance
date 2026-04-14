@@ -21,7 +21,7 @@ struct EEPROM : Backup {
     DETECT = 2
   };
   
-  EEPROM(fs::path const& save_path, Size size_hint, core::Scheduler& scheduler);
+  EEPROM(std::string const& save_path, Size size_hint, core::Scheduler& scheduler);
   
   void Reset() final;
   auto Read (u32 address) -> u8 final;
@@ -50,7 +50,7 @@ private:
   void OnReadyAfterWrite();
 
   int size;
-  fs::path save_path;
+  std::string save_path;
   std::unique_ptr<BackupFile> file;
 
   core::Scheduler& scheduler;

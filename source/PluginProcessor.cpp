@@ -1,37 +1,28 @@
+//
+// PluginProcessor.cpp
+//
+
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include <cassert>
 
-PluginProcessor::PluginProcessor() :
-    AudioProcessor(BusesProperties()
-        .withOutput("Main", juce::AudioChannelSet::stereo(), true))
+PluginProcessor::PluginProcessor()
+    : AudioProcessor(BusesProperties().withOutput("Main", juce::AudioChannelSet::stereo()))
 {
-    
+
 }
 
 PluginProcessor::~PluginProcessor() = default;
 
 void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
-    juce::ignoreUnused(samplesPerBlock);
+    DBG("prepareToPlay: sampleRate=" << sampleRate << " blockSize=" << samplesPerBlock);
+    emulator_.prepare(sampleRate, samplesPerBlock);
 }
 
-void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
-                                   juce::MidiBuffer& midiMessages) {
+void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) {
     juce::ScopedNoDenormals noDenormals;
+
     buffer.clear();
-
-    auto mainBuffer = getBusBuffer(buffer, false, 0);
-    mainBuffer.clear();
-
-    for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
-        if (mainBuffer.getNumChannels() > 0) {
-            mainBuffer.getWritePointer(0)[sample] = 0.f;
-
-            if (mainBuffer.getNumChannels() > 1) {
-                mainBuffer.getWritePointer(1)[sample] = 0.f;
-            }
-        }
-    }
+    emulator_.render(buffer, buffer.getNumSamples());
 }
 
 void PluginProcessor::getStateInformation(juce::MemoryBlock &destData) {

@@ -9,7 +9,6 @@
 
 #include <algorithm>
 #include <cstring>
-#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <nba/integer.hpp>
@@ -17,21 +16,21 @@
 #include <string>
 #include <vector>
 
-namespace fs = std::filesystem;
-
 namespace nba {
 
 struct BackupFile {
-  static auto OpenOrCreate(fs::path const& save_path,
+  static auto OpenOrCreate(std::string const& save_path,
                            std::vector<size_t> const& valid_sizes,
                            int& default_size) -> std::unique_ptr<BackupFile> {
     bool create = true;
     auto flags = std::ios::binary | std::ios::in | std::ios::out;
     std::unique_ptr<BackupFile> file { new BackupFile() };
 
-    // @todo: check file type and permissions?
-    if(fs::is_regular_file(save_path)) {
-      auto file_size = fs::file_size(save_path);
+    // Check if file exists and get its size
+    std::ifstream probe(save_path, std::ios::binary | std::ios::ate);
+    if(probe.good()) {
+      auto file_size = static_cast<size_t>(probe.tellg());
+      probe.close();
 
       // allow for some extra/unused data; required for mGBA save compatibility
       auto save_size = file_size & ~63u;
@@ -42,7 +41,7 @@ struct BackupFile {
       if(std::find(begin, end, save_size) != end) {
         file->stream.open(save_path.c_str(), flags);
         if(file->stream.fail()) {
-          throw std::runtime_error("BackupFile: unable to open file: " + save_path.string());
+          throw std::runtime_error("BackupFile: unable to open file: " + save_path);
         }
         default_size = save_size;
         file->save_size = save_size;
@@ -59,7 +58,7 @@ struct BackupFile {
       file->save_size = default_size;
       file->stream.open(save_path, flags | std::ios::trunc);
       if(file->stream.fail()) {
-        throw std::runtime_error("BackupFile: unable to create file: " + save_path.string());
+        throw std::runtime_error("BackupFile: unable to create file: " + save_path);
       }
       file->memory.reset(new u8[default_size]);
       file->MemorySet(0, default_size, 0xFF);

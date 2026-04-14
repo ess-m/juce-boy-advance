@@ -18,7 +18,7 @@ namespace nba {
 static constexpr int g_addr_bits[2] = { 6, 14 };
 static constexpr int g_save_size[2] = { 512, 8192 };
 
-EEPROM::EEPROM(fs::path const& save_path, Size size_hint, core::Scheduler& scheduler)
+EEPROM::EEPROM(std::string const& save_path, Size size_hint, core::Scheduler& scheduler)
     : size(size_hint)
     , save_path(save_path)
     , scheduler(scheduler) {

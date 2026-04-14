@@ -10,8 +10,12 @@ if (WIN32)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE INTERNAL "")
 endif ()
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 add_subdirectory(external/JUCE)
 add_subdirectory(external/clap-juce-extensions EXCLUDE_FROM_ALL)
+add_subdirectory(external/nba)
 
 juce_add_plugin(${PROJECT_NAME}
     COMPANY_NAME "Lo-Bit Club"
@@ -60,6 +64,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    nba
     juce_audio_utils
     juce_audio_formats
     juce_audio_processors

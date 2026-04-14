@@ -1,33 +1,31 @@
+//
+// PluginProcessor.h
+//
+
+
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include "services/EmulatorService.h"
+
 class PluginProcessor final : public juce::AudioProcessor {
 private:
+    EmulatorService emulator_;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 
 public:
     PluginProcessor();
     ~PluginProcessor() override;
 
+    EmulatorService& getEmulator() { return emulator_; }
+
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override {}
 
-    bool isBusesLayoutSupported(const BusesLayout &layouts) const override {
-        #if JucePlugin_IsMidiEffect
-                juce::ignoreUnused (layouts);
-                return true;
-        #else
-            if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono() &&
-                layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
-                return false;
-
-        #if ! JucePlugin_IsSynth
-                if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
-                    return false;
-        #endif
-        return true;
-        #endif
+    bool isBusesLayoutSupported(const BusesLayout& layouts) const override {
+        return layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo();
     }
 
     void processBlock(juce::AudioBuffer<float> &, juce::MidiBuffer &) override;
