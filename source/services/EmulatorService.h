@@ -7,6 +7,8 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 
+#include "BinaryData.h"
+
 #include <nba/core.hpp>
 #include <nba/config.hpp>
 #include <nba/rom/rom.hpp>
@@ -52,23 +54,15 @@ private:
         return nullptr;
     }
 
-    bool loadBIOS(const juce::File& biosFile) {
-        juce::MemoryBlock data;
-        
-        if (!biosFile.loadFileAsData(data)) return false;
-
-        const auto* bytes = static_cast<const uint8_t*>(data.getData());
-        biosData_.assign(bytes, bytes + data.getSize());
-        
-        return true;
-    }
-
 public:
     EmulatorService()
     : videoDevice_(std::make_shared<JuceVideoDevice>(video_))
     , audioDevice_(std::make_shared<JuceAudioDevice>())
     , config_(std::make_shared<nba::Config>())
     {
+        const auto* biosAddr = reinterpret_cast<const uint8_t*>(BinaryData::gba_bios_bin);
+        biosData_.assign(biosAddr, biosAddr + BinaryData::gba_bios_binSize);
+
         config_->video_dev = videoDevice_;
         config_->audio_dev = audioDevice_;
         config_->skip_bios = true;
@@ -89,12 +83,6 @@ public:
     }
 
     bool loadROM(const juce::File& romFile) {
-        // TODO: make bios loading more explicit, for now load next to ROM
-        if (biosData_.empty()) {
-            auto biosFile = romFile.getParentDirectory().getChildFile("gba_bios.bin");
-            if (biosFile.existsAsFile()) loadBIOS(biosFile);
-        }
-
         juce::MemoryBlock data;
         if (!romFile.loadFileAsData(data)) return false;
 
@@ -104,8 +92,7 @@ public:
         DBG("loadROM: audioDevice sampleRate=" << audioDevice_->GetSampleRate() << " blockSize=" << audioDevice_->GetBlockSize());
         core_ = nba::CreateCore(config_);
 
-        if (!biosData_.empty())
-            core_->Attach(biosData_);
+        core_->Attach(biosData_);
 
         auto savePath = romFile.withFileExtension(".sav").getFullPathName().toStdString();
         auto backup = createBackup(romData, savePath);

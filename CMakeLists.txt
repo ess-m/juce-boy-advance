@@ -46,6 +46,9 @@ add_subdirectory(external/JUCE)
 add_subdirectory(external/clap-juce-extensions EXCLUDE_FROM_ALL)
 add_subdirectory(external/nba)
 
+juce_add_binary_data(${PROJECT_NAME}_BinaryData
+    SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/bios/gba_bios.bin)
+
 juce_add_plugin(${PROJECT_NAME}
     COMPANY_NAME "Lo-Bit Club"
     BUNDLE_ID "com.lobit.jba"
@@ -89,7 +92,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0
-    PRODUCT_NAME_WITHOUT_VERSION="JuceBoyAdvance"
+    PRODUCT_NAME_WITHOUT_VERSION="JuceBoyAdvance"    
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -105,4 +108,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     juce::juce_recommended_config_flags
     juce::juce_recommended_lto_flags
     juce::juce_recommended_warning_flags
+
+    ${PROJECT_NAME}_BinaryData
 )
