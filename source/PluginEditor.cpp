@@ -15,9 +15,11 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 {
     setSize(SCREEN_W * 3, SCREEN_H * 3);
     setResizable(true, false);
-    setResizeLimits(SCREEN_W, SCREEN_H, 4096, 4096);
+    setResizeLimits(SCREEN_W, SCREEN_H, SCREEN_W * 16, SCREEN_H * 16);
+    
     getConstrainer()->setFixedAspectRatio(
-        static_cast<float>(SCREEN_W) / static_cast<float>(SCREEN_H));
+        static_cast<float>(SCREEN_W) / static_cast<float>(SCREEN_H)
+    );
     setWantsKeyboardFocus(true);
 }
 
@@ -56,7 +58,7 @@ bool PluginEditor::keyStateChanged(bool /*isKeyDown*/) {
 void PluginEditor::parentHierarchyChanged() {
     AudioProcessorEditor::parentHierarchyChanged();
 
-#if JUCE_MAC && JUCE_STANDALONE_APPLICATION &&!DEBUG
+    #if JUCE_MAC && JUCE_STANDALONE_APPLICATION &&!DEBUG
     static bool windowStyled = false;
 
     if (!windowStyled) {
@@ -76,5 +78,5 @@ void PluginEditor::parentHierarchyChanged() {
             });
         }
     }
-#endif
+    #endif
 }
