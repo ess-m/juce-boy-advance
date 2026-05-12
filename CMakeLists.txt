@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "" FORCE)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 project(JuceBoyAdvance VERSION 0.1.0)
 
@@ -12,6 +13,34 @@ endif ()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+include (CPM)
+
+CPMAddPackage(
+        NAME SDL2
+        VERSION 2.28.5
+        GITHUB_REPOSITORY libsdl-org/SDL
+        GIT_TAG release-2.28.5
+        OPTIONS
+        "SDL_SHARED OFF"
+        "SDL_STATIC ON"
+        "SDL_VIDEO OFF"
+        "SDL_RENDER OFF"
+        "SDL_AUDIO OFF"
+        "SDL_FILESYSTEM OFF"
+        "SDL_THREADS ON"
+        "SDL_TIMERS ON"
+        "SDL_FILE OFF"
+        "SDL_CPUINFO OFF"
+        "SDL_HAPTIC OFF"
+        "SDL_JOYSTICK ON"
+        "SDL_GAMECONTROLLER ON"
+        "SDL_HIDAPI ON"
+        "SDL_EVENTS ON"
+        "SDL_LOCALE OFF"
+        "SDL_POWER OFF"
+        "SDL_SENSOR OFF"
+)
 
 add_subdirectory(external/JUCE)
 add_subdirectory(external/clap-juce-extensions EXCLUDE_FROM_ALL)
@@ -65,6 +94,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     nba
+    SDL2-static
     juce_audio_utils
     juce_audio_formats
     juce_audio_processors

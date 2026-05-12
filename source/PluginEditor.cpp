@@ -64,34 +64,8 @@ void PluginEditor::mouseDown(const juce::MouseEvent& e) {
     );
 }
 
-struct KeyMapping {
-    int juceKeyCode;
-    nba::Key gbaKey;
-};
-
-static const KeyMapping keyMappings[] = {
-    { 'Z', nba::Key::A },
-    { 'X', nba::Key::B },
-    { juce::KeyPress::returnKey, nba::Key::Start },
-    { juce::KeyPress::backspaceKey, nba::Key::Select},
-    { juce::KeyPress::upKey, nba::Key::Up },
-    { juce::KeyPress::downKey, nba::Key::Down },
-    { juce::KeyPress::leftKey, nba::Key::Left },
-    { juce::KeyPress::rightKey, nba::Key::Right },
-    { 'A', nba::Key::L },
-    { 'S', nba::Key::R },
-};
-
 bool PluginEditor::keyStateChanged(bool /*isKeyDown*/) {
-    auto& input = processor_.getEmulator().getInput();
-
-    for (const auto& [juceKey, gbaKey] : keyMappings) {
-        if (juce::KeyPress::isKeyCurrentlyDown(juceKey)) {
-            input.keyDown(gbaKey);
-        } else {
-            input.keyUp(gbaKey);
-        }
-    }
+    processor_.getEmulator().getInput().pollKeyboard();
     return true;
 }
 
