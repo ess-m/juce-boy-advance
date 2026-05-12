@@ -11,6 +11,7 @@
 
 #include <nba/core.hpp>
 #include <nba/config.hpp>
+#include <nba/save_state.hpp>
 #include <nba/rom/rom.hpp>
 #include <nba/rom/gpio/gpio.hpp>
 #include <nba/rom/backup/flash.hpp>
@@ -36,6 +37,9 @@ private:
 
     juce::TemporaryFile flashFile_ { ".flash" };
     nba::FLASH* flashBackup_ = nullptr;
+
+    double lastSampleRate_ = 0.0;
+    int lastBlockSize_ = 0;
 
     void initCore() {
         core_ = nba::CreateCore(config_);
@@ -76,10 +80,15 @@ public:
 
         if (!core_) {
             initCore();
-        } else {
-            core_->Reset();
-            core_->Attach(biosData_);
+        } else if (!juce::approximatelyEqual(sampleRate, lastSampleRate_) || blockSize != lastBlockSize_) {
+            nba::SaveState state;
+            core_->CopyState(state);
+            state.apu.resolution_old = 0xFF;
+            core_->LoadState(state);
         }
+
+        lastSampleRate_ = sampleRate;
+        lastBlockSize_ = blockSize;
     }
 
     void getState(juce::MemoryBlock& destData) {
