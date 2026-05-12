@@ -75,6 +75,10 @@ void Core::SetKeyStatus(Key key, bool pressed) {
   keypad.SetKeyStatus(key, pressed);
 }
 
+void Core::SendSerial8(u8 value) {
+  bus.SendSerial8(value);
+}
+
 void Core::Run(int cycles) {
   using HaltControl = Bus::Hardware::HaltControl;
 

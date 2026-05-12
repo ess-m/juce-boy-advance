@@ -111,6 +111,10 @@ public:
         audioDevice_->render(buffer, numSamples);
     }
 
+    void sendSerial8(uint8_t value) {
+        if (core_) core_->SendSerial8(value);
+    }
+
     InputService& getInput() { return input_; }
     VideoService& getVideo() { return video_; }
 };

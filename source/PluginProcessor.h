@@ -12,6 +12,12 @@ class PluginProcessor final : public juce::AudioProcessor {
 private:
     EmulatorService emulator_;
 
+    double lastPpq_ = 0.0;
+    bool   lastPlaying_ = false;
+    bool   ppqValid_ = false;
+
+    void handleSync();
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 
 public:

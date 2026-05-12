@@ -146,6 +146,8 @@ auto Bus::Hardware::ReadByte(u32 address) ->  u8 {
 
     // Serial communication
     // @todo: implement sensible read/write behaviour for the remaining registers.
+    case SIODATA8+0: return siodata8;
+    case SIODATA8+1: return 0;
     case SIOCNT+0: return (u8)(siocnt >> 0);
     case SIOCNT+1: return (u8)(siocnt >> 8);
     case RCNT+0: return rcnt[0];
@@ -509,6 +511,8 @@ void Bus::Hardware::WriteByte(u32 address,  u8 value) {
     case TM3CNT_H:   timer.WriteByte(3, 2, value); break;
 
     // Serial communication
+    case SIODATA8+0: siodata8 = value; break;
+    case SIODATA8+1: break;
     case SIOCNT+0: WriteHalf(SIOCNT, (siocnt & 0xFF00) | (value << 0)); break;
     case SIOCNT+1: WriteHalf(SIOCNT, (siocnt & 0x00FF) | (value << 8)); break;
     case RCNT+0: rcnt[0] = value; break;
@@ -611,7 +615,8 @@ void Bus::Hardware::WriteHalf(u32 address, u16 value) {
     case SIOCNT: {
       siocnt = (siocnt & 0x80u) | (value & ~0x80u);
 
-      if(!(siocnt & 0x80u) && value & 0x80u) {
+      // only schedule a transfer when GBA is configured as the sender
+      if(!(siocnt & 0x80u) && (value & 0x80u) && (siocnt & 0x01u)) {
         // bit 0 (from bit  1): internal shift clock (0 = 256 KHz, 1 = 2 MHz)
         // bit 1 (from bit 12): transfer length (0 = 8-bit, 1 = 32-bit)
         static const int table[4] {
@@ -683,6 +688,19 @@ void Bus::SIOTransferDone() {
   }
 
   hw.siocnt &= ~0x80u;
+}
+
+void Bus::SendSerial8(u8 value) {
+  if((hw.rcnt[1] & 0xC0u) != 0) return;
+  if((hw.siocnt & 0x3000u) != 0) return;
+
+  hw.siodata8 = value;
+  hw.siocnt |= 0x80u;
+
+  static const int cycles_table[4] { 512, 64, 2048, 256 };
+  const int cycles = cycles_table[((hw.siocnt >> 1) & 1u) | ((hw.siocnt >> 11) & 2u)];
+
+  scheduler.Add(cycles, Scheduler::EventClass::SIO_transfer_done);
 }
 
 } // namespace nba::core

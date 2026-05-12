@@ -92,6 +92,7 @@ struct Bus {
 
     u16 siocnt = 0;
     u8 rcnt[2] { 0, 0 };
+    u8 siodata8 = 0;
     u8 postflg = 0;
 
     struct MGBALog {
@@ -246,6 +247,7 @@ struct Bus {
   auto ReadOpenBus(u32 address) -> u32;
 
   void SIOTransferDone();
+  void SendSerial8(u8 value);
 
   void Prefetch(u32 address, bool code, int cycles);
   void StopPrefetch();
