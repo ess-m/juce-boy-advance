@@ -47,7 +47,10 @@ add_subdirectory(external/clap-juce-extensions EXCLUDE_FROM_ALL)
 add_subdirectory(external/nba)
 
 juce_add_binary_data(${PROJECT_NAME}_BinaryData
-    SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/bios/gba_bios.bin)
+    SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/bios/gba_bios.bin
+        ${CMAKE_CURRENT_SOURCE_DIR}/rom/fms.gba
+)
 
 juce_add_plugin(${PROJECT_NAME}
     COMPANY_NAME "Lo-Bit Club"

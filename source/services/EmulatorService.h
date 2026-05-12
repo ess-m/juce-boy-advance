@@ -13,9 +13,7 @@
 #include <nba/config.hpp>
 #include <nba/rom/rom.hpp>
 #include <nba/rom/gpio/gpio.hpp>
-#include <nba/rom/backup/sram.hpp>
 #include <nba/rom/backup/flash.hpp>
-#include <nba/rom/backup/eeprom.hpp>
 
 #include "AudioService.h"
 #include "InputService.h"
@@ -34,24 +32,26 @@ private:
     std::shared_ptr<nba::Config> config_;
     std::unique_ptr<nba::CoreBase> core_;
 
-    bool running_ = false;
     std::vector<uint8_t> biosData_;
 
-    static bool romContains(const std::vector<uint8_t>& rom, const char* id) {
-        auto len = std::strlen(id);
-        return std::search(rom.begin(), rom.end(), id, id + len) != rom.end();
-    }
+    juce::TemporaryFile flashFile_ { ".flash" };
+    nba::FLASH* flashBackup_ = nullptr;
 
-    std::unique_ptr<nba::Backup> createBackup(const std::vector<uint8_t>& rom, const std::string& savePath) {
-        if (romContains(rom, "SRAM_V"))
-            return std::make_unique<nba::SRAM>(savePath);
-        if (romContains(rom, "FLASH1M_V"))
-            return std::make_unique<nba::FLASH>(savePath, nba::FLASH::SIZE_128K);
-        if (romContains(rom, "FLASH512_V") || romContains(rom, "FLASH_V"))
-            return std::make_unique<nba::FLASH>(savePath, nba::FLASH::SIZE_64K);
-        if (romContains(rom, "EEPROM_V"))
-            return std::make_unique<nba::EEPROM>(savePath, nba::EEPROM::DETECT, core_->GetScheduler());
-        return nullptr;
+    void initCore() {
+        core_ = nba::CreateCore(config_);
+        core_->Attach(biosData_);
+
+        const auto* romAddr = reinterpret_cast<const uint8_t*>(BinaryData::fms_gba);
+        std::vector<uint8_t> romData(romAddr, romAddr + BinaryData::fms_gbaSize);
+
+        auto flash = std::make_unique<nba::FLASH>(
+            flashFile_.getFile().getFullPathName().toStdString(),
+            nba::FLASH::SIZE_128K
+        );
+        flashBackup_ = flash.get();
+
+        nba::ROM rom(std::move(romData), std::move(flash), std::make_unique<nba::GPIO>());
+        core_->Attach(std::move(rom));
     }
 
 public:
@@ -74,38 +74,25 @@ public:
         audio_.prepare(sampleRate, blockSize);
         audioDevice_->prepare(static_cast<int>(sampleRate), blockSize);
 
-        // Re-reset core so APU resampler picks up new sample rate
-        if (core_) {
+        if (!core_) {
+            initCore();
+        } else {
             core_->Reset();
-            if (!biosData_.empty())
-                core_->Attach(biosData_);
+            core_->Attach(biosData_);
         }
     }
 
-    bool loadROM(const juce::File& romFile) {
-        juce::MemoryBlock data;
-        if (!romFile.loadFileAsData(data)) return false;
+    void getState(juce::MemoryBlock& destData) {
+        flashFile_.getFile().loadFileAsData(destData);
+    }
 
-        const auto* bytes = static_cast<const uint8_t*>(data.getData());
-        std::vector<uint8_t> romData(bytes, bytes + data.getSize());
-
-        DBG("loadROM: audioDevice sampleRate=" << audioDevice_->GetSampleRate() << " blockSize=" << audioDevice_->GetBlockSize());
-        core_ = nba::CreateCore(config_);
-
-        core_->Attach(biosData_);
-
-        auto savePath = romFile.withFileExtension(".sav").getFullPathName().toStdString();
-        auto backup = createBackup(romData, savePath);
-        auto gpio = std::make_unique<nba::GPIO>();
-        nba::ROM rom(std::move(romData), std::move(backup), std::move(gpio));
-        core_->Attach(std::move(rom));
-
-        running_ = true;
-        return true;
+    void setState(const void* data, int sizeInBytes) {
+        flashFile_.getFile().replaceWithData(data, static_cast<size_t>(sizeInBytes));
+        if (flashBackup_) flashBackup_->Reset();
     }
 
     void render(juce::AudioBuffer<float>& buffer, int numSamples) {
-        if (!running_ || !core_) return;
+        if (!core_) return;
 
         input_.syncToCore(*core_);
 
@@ -117,5 +104,4 @@ public:
 
     InputService& getInput() { return input_; }
     VideoService& getVideo() { return video_; }
-    bool isRunning() const { return running_; }
 };

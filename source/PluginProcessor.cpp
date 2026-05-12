@@ -26,9 +26,12 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
 }
 
 void PluginProcessor::getStateInformation(juce::MemoryBlock &destData) {
+    emulator_.getState(destData);
 }
 
 void PluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
+    const juce::ScopedLock sl(getCallbackLock());
+    emulator_.setState(data, sizeInBytes);
 }
 
 juce::AudioProcessor * JUCE_CALLTYPE createPluginFilter() {

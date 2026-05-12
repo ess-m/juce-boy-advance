@@ -48,22 +48,6 @@ void PluginEditor::resized() {
     processor_.getEmulator().getVideo().setScale(scale);
 }
 
-void PluginEditor::mouseDown(const juce::MouseEvent& e) {
-    if (processor_.getEmulator().isRunning()) return;
-
-    fileChooser_ =
-        std::make_unique<juce::FileChooser>("Load ROM", juce::File{}, "*.gba");
-
-    fileChooser_->launchAsync(
-    juce::FileBrowserComponent::openMode |
-        juce::FileBrowserComponent::canSelectFiles,
-            [this](const juce::FileChooser &fc) {
-                auto file = fc.getResult();
-                if (file.existsAsFile()) processor_.getEmulator().loadROM(file);
-            }
-    );
-}
-
 bool PluginEditor::keyStateChanged(bool /*isKeyDown*/) {
     processor_.getEmulator().getInput().pollKeyboard();
     return true;
