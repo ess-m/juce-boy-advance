@@ -29,6 +29,8 @@ void PPU::InitWindow() {
 }
 
 void PPU::DrawWindow() {
+  if(config->frame_renderer->IsActive()) return;
+
   const u64 timestamp_now = scheduler.GetTimestampNow();
 
   const int cycles = (int)(timestamp_now - window.timestamp_last_sync);

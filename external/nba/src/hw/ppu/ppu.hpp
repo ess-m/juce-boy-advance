@@ -459,6 +459,9 @@ private:
 
   bool dma3_video_transfer_running;
 
+  nba::PpuFrameSnapshot frame_snapshot {};
+  void PopulateFrameSnapshot();
+
   #include "background.inl"
 };
 

@@ -32,6 +32,8 @@ void PPU::InitMerge() {
 }
 
 void PPU::DrawMerge() {
+  if(config->frame_renderer->IsActive()) return;
+
   const u64 timestamp_now = scheduler.GetTimestampNow();
   
   const int cycles = (int)(timestamp_now - merge.timestamp_last_sync);

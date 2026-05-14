@@ -21,6 +21,7 @@
 #include "VideoService.h"
 #include "adapters/JuceAudioDevice.h"
 #include "adapters/JuceVideoDevice.h"
+#include "adapters/WorkerPpuRenderer.h"
 
 class EmulatorService {
 private:    
@@ -30,6 +31,7 @@ private:
 
     std::shared_ptr<JuceVideoDevice> videoDevice_;
     std::shared_ptr<JuceAudioDevice> audioDevice_;
+    std::shared_ptr<WorkerPpuRenderer> ppuRenderer_;
     std::shared_ptr<nba::Config> config_;
     std::unique_ptr<nba::CoreBase> core_;
 
@@ -62,6 +64,7 @@ public:
     EmulatorService()
     : videoDevice_(std::make_shared<JuceVideoDevice>(video_))
     , audioDevice_(std::make_shared<JuceAudioDevice>())
+    , ppuRenderer_(std::make_shared<WorkerPpuRenderer>(video_))
     , config_(std::make_shared<nba::Config>())
     {
         const auto* biosAddr = reinterpret_cast<const uint8_t*>(BinaryData::gba_bios_bin);
@@ -69,10 +72,14 @@ public:
 
         config_->video_dev = videoDevice_;
         config_->audio_dev = audioDevice_;
+        config_->frame_renderer = ppuRenderer_;
         config_->skip_bios = true;
         config_->audio.interpolation = nba::Config::Audio::Interpolation::Sinc_128;
     }
-    ~EmulatorService() = default;
+
+    ~EmulatorService() {
+        ppuRenderer_->stop();
+    }
 
     void prepare(double sampleRate, int blockSize) {
         audio_.prepare(sampleRate, blockSize);
@@ -89,6 +96,8 @@ public:
 
         lastSampleRate_ = sampleRate;
         lastBlockSize_ = blockSize;
+
+        ppuRenderer_->start();
     }
 
     void getState(juce::MemoryBlock& destData) {

@@ -37,6 +37,8 @@ void PPU::InitSprite() {
 }
 
 void PPU::DrawSprite() {
+  if(config->frame_renderer->IsActive()) return;
+
   const u64 timestamp_now = scheduler.GetTimestampNow();
 
   const int cycles = (int)(timestamp_now - sprite.timestamp_last_sync);

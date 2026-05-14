@@ -42,8 +42,10 @@ void PPU::InitBackground() {
 }
 
 void PPU::DrawBackground() {
+  if(config->frame_renderer->IsActive()) return;
+
   const u64 timestamp_now = scheduler.GetTimestampNow();
-  
+
   const int cycles = (int)(timestamp_now - bg.timestamp_last_sync);
 
   if(cycles == 0 || bg.cycle >= 1232U) {
