@@ -49,7 +49,7 @@ add_subdirectory(external/nba)
 juce_add_binary_data(${PROJECT_NAME}_BinaryData
     SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/bios/gba_bios.bin
-        ${CMAKE_CURRENT_SOURCE_DIR}/rom/fms.gba
+        ${CMAKE_CURRENT_SOURCE_DIR}/rom/fms-plugin.gba
 )
 
 juce_add_plugin(${PROJECT_NAME}

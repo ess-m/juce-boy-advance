@@ -25,6 +25,7 @@ Core::Core(std::shared_ptr<Config> config)
     , timer(scheduler, irq, apu)
     , keypad(scheduler, irq)
     , bus(scheduler, {cpu, irq, dma, apu, ppu, timer, keypad}) {
+  bus.hw.config = config;
   Reset();
 }
 

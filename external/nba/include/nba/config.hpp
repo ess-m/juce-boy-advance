@@ -9,6 +9,7 @@
 
 #include <memory>
 #include <nba/device/audio_device.hpp>
+#include <nba/device/audio_sample_sink.hpp>
 #include <nba/device/frame_renderer.hpp>
 #include <nba/device/video_device.hpp>
 #include <nba/integer.hpp>
@@ -49,6 +50,7 @@ struct Config {
   std::shared_ptr<AudioDevice> audio_dev = std::make_shared<NullAudioDevice>();
   std::shared_ptr<VideoDevice> video_dev = std::make_shared<NullVideoDevice>();
   std::shared_ptr<FrameRenderer> frame_renderer = std::make_shared<NullFrameRenderer>();
+  std::shared_ptr<AudioSampleSink> audio_sample_sink = std::make_shared<NullAudioSampleSink>();
 };
 
 } // namespace nba

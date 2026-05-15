@@ -21,6 +21,7 @@
 #include "VideoService.h"
 #include "adapters/JuceAudioDevice.h"
 #include "adapters/JuceVideoDevice.h"
+#include "adapters/PluginAudioSampleSink.h"
 #include "adapters/WorkerPpuRenderer.h"
 
 #include <vector>
@@ -38,9 +39,12 @@ private:
 
     std::shared_ptr<JuceVideoDevice> videoDevice_;
     std::shared_ptr<JuceAudioDevice> audioDevice_;
+    std::shared_ptr<PluginAudioSampleSink> audioSampleSink_;
     std::shared_ptr<WorkerPpuRenderer> ppuRenderer_;
     std::shared_ptr<nba::Config> config_;
     std::unique_ptr<nba::CoreBase> core_;
+
+    juce::AudioBuffer<float> apuTempBuffer_;
 
     std::vector<uint8_t> biosData_;
 
@@ -54,8 +58,8 @@ private:
         core_ = nba::CreateCore(config_);
         core_->Attach(biosData_);
 
-        const auto* romAddr = reinterpret_cast<const uint8_t*>(BinaryData::fms_gba);
-        std::vector<uint8_t> romData(romAddr, romAddr + BinaryData::fms_gbaSize);
+        const auto* romAddr = reinterpret_cast<const uint8_t*>(BinaryData::fmsplugin_gba);
+        std::vector<uint8_t> romData(romAddr, romAddr + BinaryData::fmsplugin_gbaSize);
 
         auto flash = std::make_unique<nba::FLASH>(
             flashFile_.getFile().getFullPathName().toStdString(),
@@ -71,6 +75,7 @@ public:
     EmulatorService()
     : videoDevice_(std::make_shared<JuceVideoDevice>(video_))
     , audioDevice_(std::make_shared<JuceAudioDevice>())
+    , audioSampleSink_(std::make_shared<PluginAudioSampleSink>())
     , ppuRenderer_(std::make_shared<WorkerPpuRenderer>(video_))
     , config_(std::make_shared<nba::Config>())
     {
@@ -79,6 +84,7 @@ public:
 
         config_->video_dev = videoDevice_;
         config_->audio_dev = audioDevice_;
+        config_->audio_sample_sink = audioSampleSink_;
         config_->frame_renderer = ppuRenderer_;
         config_->skip_bios = true;
         config_->audio.interpolation = nba::Config::Audio::Interpolation::Sinc_128;
@@ -91,6 +97,9 @@ public:
     void prepare(double sampleRate, int blockSize) {
         audio_.prepare(sampleRate, blockSize);
         audioDevice_->prepare(static_cast<int>(sampleRate), blockSize);
+        audioSampleSink_->prepare(sampleRate, blockSize);
+
+        apuTempBuffer_.setSize(2, blockSize);
 
         if (!core_) {
             initCore();
@@ -117,13 +126,14 @@ public:
     }
 
     int calculateLatencySamples(double hostSampleRate) const {
-        constexpr double romSampleRate     = 32768.0;
-        constexpr int    romPongSamples    = 256 * 2;
-        constexpr double apuMixerRate      = 65536.0;
-        constexpr int    sincCenterTaps    = 64;
+        constexpr double romSampleRate = 32768.0;
+        constexpr int bufferFillSamples = 256;
+        constexpr int ringDwellSamples = 128;
+        constexpr int interpInputSamples = 2;
+        constexpr int renderExecSamples = 128;
 
-        const double seconds = romPongSamples / romSampleRate
-                             + sincCenterTaps / apuMixerRate;
+        const double seconds =
+            (bufferFillSamples + ringDwellSamples + interpInputSamples + renderExecSamples) / romSampleRate;
 
         return static_cast<int>(std::round(seconds * hostSampleRate));
     }
@@ -147,7 +157,11 @@ public:
         if (rendered < numSamples) {
             core_->Run(audio_.calcCycles(numSamples - rendered));
         }
-        audioDevice_->render(buffer, numSamples);
+        audioSampleSink_->render(buffer, numSamples);
+
+        audioDevice_->render(apuTempBuffer_, numSamples);
+        buffer.addFrom(0, 0, apuTempBuffer_, 0, 0, numSamples);
+        buffer.addFrom(1, 0, apuTempBuffer_, 1, 0, numSamples);
     }
 
     InputService& getInput() { return input_; }

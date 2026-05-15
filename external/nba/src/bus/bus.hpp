@@ -8,6 +8,7 @@
 #pragma once
 
 #include <array>
+#include <nba/config.hpp>
 #include <nba/rom/rom.hpp>
 #include <nba/integer.hpp>
 #include <nba/save_state.hpp>
@@ -99,6 +100,9 @@ struct Bus {
       u16 enable = 0;
       std::array<char, 257> message;
     } mgba_log = {};
+
+    std::shared_ptr<Config> config;
+    u32 audio_l_buffer_latch = 0;
 
     auto ReadByte(u32 address) ->  u8;
     auto ReadHalf(u32 address) -> u16;
