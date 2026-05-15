@@ -6,6 +6,8 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include <vector>
+
 #include "services/EmulatorService.h"
 
 class PluginProcessor final : public juce::AudioProcessor {
@@ -13,10 +15,12 @@ private:
     EmulatorService emulator_;
 
     double lastPpq_ = 0.0;
-    bool   lastPlaying_ = false;
-    bool   ppqValid_ = false;
+    bool lastPlaying_ = false;
+    bool ppqValid_ = false;
 
-    void handleSync();
+    std::vector<SyncEvent> syncEvents_;
+
+    void buildSyncEvents(int numSamples);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 

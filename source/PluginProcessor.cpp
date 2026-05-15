@@ -8,7 +8,7 @@
 PluginProcessor::PluginProcessor()
     : AudioProcessor(BusesProperties().withOutput("Main", juce::AudioChannelSet::stereo()))
 {
-
+    syncEvents_.reserve(64); // max ticks per block
 }
 
 PluginProcessor::~PluginProcessor() = default;
@@ -16,6 +16,7 @@ PluginProcessor::~PluginProcessor() = default;
 void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
     DBG("prepareToPlay: sampleRate=" << sampleRate << " blockSize=" << samplesPerBlock);
     emulator_.prepare(sampleRate, samplesPerBlock);
+    setLatencySamples(emulator_.calculateLatencySamples(sampleRate));
 }
 
 void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) {
@@ -23,11 +24,14 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
 
     buffer.clear();
 
-    handleSync();
-    emulator_.render(buffer, buffer.getNumSamples());
+    const int numSamples = buffer.getNumSamples();
+    buildSyncEvents(numSamples);
+    emulator_.render(buffer, numSamples, syncEvents_);
 }
 
-void PluginProcessor::handleSync() {
+void PluginProcessor::buildSyncEvents(int numSamples) {
+    syncEvents_.clear();
+
     auto* playHead = getPlayHead();
     if (playHead == nullptr) return;
 
@@ -35,11 +39,11 @@ void PluginProcessor::handleSync() {
     if (!pos.hasValue()) return;
 
     const bool isPlaying = pos->getIsPlaying();
-
-    if (isPlaying && !lastPlaying_) {        
-        emulator_.sendSerial8(0x02); // SYNC_MSG_START
-    } else if (!isPlaying && lastPlaying_) {        
-        emulator_.sendSerial8(0x03); // SYNC_MSG_STOP
+ 
+    if (isPlaying && !lastPlaying_) {
+        syncEvents_.push_back({ 0, 0x02 }); // SYNC_MSG_START
+    } else if (!isPlaying && lastPlaying_) {
+        syncEvents_.push_back({ 0, 0x03 }); // SYNC_MSG_STOP
     }
 
     const auto ppqOpt = pos->getPpqPosition();
@@ -48,13 +52,18 @@ void PluginProcessor::handleSync() {
         const double currentPpq = *ppqOpt;
         const double delta = currentPpq - lastPpq_;
 
-        // Skip ticks on loops/locates (delta negative or large).
         if (delta > 0.0 && delta < 1.0) {
             const auto lastTick = static_cast<int64_t>(std::floor(lastPpq_ * 24.0));
             const auto currentTick = static_cast<int64_t>(std::floor(currentPpq * 24.0));
-            
+
             for (int64_t i = lastTick; i < currentTick; ++i) {
-                emulator_.sendSerial8(0x01); // SYNC_MSG_TICK
+                const double tickPpq = static_cast<double>(i + 1) / 24.0;
+                const double t = (tickPpq - lastPpq_) / delta;
+
+                const int sample = 
+                    juce::jlimit(0, numSamples - 1, static_cast<int>(t * numSamples));
+
+                syncEvents_.push_back({ sample, 0x01 }); // SYNC_MSG_TICK
             }
         }
     }

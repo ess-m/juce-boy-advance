@@ -23,6 +23,13 @@
 #include "adapters/JuceVideoDevice.h"
 #include "adapters/WorkerPpuRenderer.h"
 
+#include <vector>
+
+struct SyncEvent {
+    int sampleOffset;
+    uint8_t value;
+};
+
 class EmulatorService {
 private:    
     AudioService audio_;
@@ -109,19 +116,38 @@ public:
         if (flashBackup_) flashBackup_->Reset();
     }
 
-    void render(juce::AudioBuffer<float>& buffer, int numSamples) {
+    int calculateLatencySamples(double hostSampleRate) const {
+        constexpr double romSampleRate     = 32768.0;
+        constexpr int    romPongSamples    = 256 * 2;
+        constexpr double apuMixerRate      = 65536.0;
+        constexpr int    sincCenterTaps    = 64;
+
+        const double seconds = romPongSamples / romSampleRate
+                             + sincCenterTaps / apuMixerRate;
+
+        return static_cast<int>(std::round(seconds * hostSampleRate));
+    }
+
+    void render(juce::AudioBuffer<float>& buffer, int numSamples,
+                const std::vector<SyncEvent>& events) {
         if (!core_) return;
 
         input_.syncToCore(*core_);
 
-        const int cycles = audio_.calcCycles(numSamples);
-        core_->Run(cycles);
+        int rendered = 0;
 
+        for (const auto& ev : events) {
+            if (ev.sampleOffset > rendered) {
+                core_->Run(audio_.calcCycles(ev.sampleOffset - rendered));
+                rendered = ev.sampleOffset;
+            }
+            core_->SendSerial8(ev.value);
+        }
+
+        if (rendered < numSamples) {
+            core_->Run(audio_.calcCycles(numSamples - rendered));
+        }
         audioDevice_->render(buffer, numSamples);
-    }
-
-    void sendSerial8(uint8_t value) {
-        if (core_) core_->SendSerial8(value);
     }
 
     InputService& getInput() { return input_; }
