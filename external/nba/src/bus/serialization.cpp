@@ -29,6 +29,8 @@ void Bus::LoadState(SaveState const& state) {
   hw.rcnt[0] = state.bus.io.rcnt[0];
   hw.rcnt[1] = state.bus.io.rcnt[1];
   hw.postflg = state.bus.io.postflg;
+  hw.siocnt = state.bus.io.siocnt;
+  hw.siodata8 = state.bus.io.siodata8;
   hw.prefetch_buffer_was_disabled = state.bus.prefetch_buffer_was_disabled;
 
   prefetch.active = state.bus.prefetch.active;
@@ -70,6 +72,8 @@ void Bus::CopyState(SaveState& state) {
   state.bus.io.rcnt[0] = hw.rcnt[0];
   state.bus.io.rcnt[1] = hw.rcnt[1];
   state.bus.io.postflg = hw.postflg;
+  state.bus.io.siocnt = hw.siocnt;
+  state.bus.io.siodata8 = hw.siodata8;
   state.bus.prefetch_buffer_was_disabled = hw.prefetch_buffer_was_disabled;
 
   state.bus.prefetch.active = prefetch.active;

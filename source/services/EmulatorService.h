@@ -24,6 +24,7 @@
 #include "adapters/PluginAudioSampleSink.h"
 #include "adapters/WorkerPpuRenderer.h"
 
+#include <optional>
 #include <vector>
 
 struct SyncEvent {
@@ -50,6 +51,8 @@ private:
 
     juce::TemporaryFile flashFile_ { ".flash" };
     nba::FLASH* flashBackup_ = nullptr;
+
+    std::optional<nba::SaveState> pendingSaveState_;
 
     double lastSampleRate_ = 0.0;
     int lastBlockSize_ = 0;
@@ -103,6 +106,11 @@ public:
 
         if (!core_) {
             initCore();
+        }
+
+        if (pendingSaveState_) {
+            core_->LoadState(*pendingSaveState_);
+            pendingSaveState_.reset();
         } else if (!juce::approximatelyEqual(sampleRate, lastSampleRate_) || blockSize != lastBlockSize_) {
             nba::SaveState state;
             core_->CopyState(state);
@@ -117,12 +125,50 @@ public:
     }
 
     void getState(juce::MemoryBlock& destData) {
-        flashFile_.getFile().loadFileAsData(destData);
+        juce::MemoryBlock flashBytes;
+        flashFile_.getFile().loadFileAsData(flashBytes);
+
+        const uint32_t flashSize = static_cast<uint32_t>(flashBytes.getSize());
+        const uint32_t stateSize = core_ ? static_cast<uint32_t>(sizeof(nba::SaveState)) : 0u;
+
+        destData.reset();
+        destData.append(&flashSize, sizeof(flashSize));
+        destData.append(&stateSize, sizeof(stateSize));
+        destData.append(flashBytes.getData(), flashBytes.getSize());
+
+        if (stateSize > 0) {
+            nba::SaveState state;
+            core_->CopyState(state);
+            destData.append(&state, sizeof(state));
+        }
     }
 
     void setState(const void* data, int sizeInBytes) {
-        flashFile_.getFile().replaceWithData(data, static_cast<size_t>(sizeInBytes));
+        if (sizeInBytes < 8) return;
+
+        const auto* bytes = static_cast<const uint8_t*>(data);
+        uint32_t flashSize = 0;
+        uint32_t stateSize = 0;
+        std::memcpy(&flashSize, bytes + 0, sizeof(flashSize));
+        std::memcpy(&stateSize, bytes + 4, sizeof(stateSize));
+
+        const size_t total = 8 + flashSize + stateSize;
+        if (total > static_cast<size_t>(sizeInBytes)) return;
+
+        flashFile_.getFile().replaceWithData(bytes + 8, flashSize);
         if (flashBackup_) flashBackup_->Reset();
+
+        if (stateSize == sizeof(nba::SaveState)) {
+            nba::SaveState state;
+            std::memcpy(&state, bytes + 8 + flashSize, sizeof(state));
+            if (state.magic == nba::SaveState::kMagicNumber) {
+                if (core_) {
+                    core_->LoadState(state);
+                } else {
+                    pendingSaveState_ = state;
+                }
+            }
+        }
     }
 
     int calculateLatencySamples(double hostSampleRate) const {

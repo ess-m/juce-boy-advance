@@ -69,6 +69,8 @@ struct SaveState {
       u8 haltcnt;
       u8 rcnt[2];
       u8 postflg;
+      u16 siocnt;
+      u8 siodata8;
     } io;
 
     struct Prefetch {
