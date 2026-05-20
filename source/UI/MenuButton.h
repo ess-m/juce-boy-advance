@@ -25,10 +25,6 @@ public:
         return themeProvider_ ? themeProvider_() : ThemeColors{};
     }
 
-    void place(int x, int y) {
-        setBounds(x, y, 36, 36);
-    }
-
     void mouseDown(const juce::MouseEvent&) override {
         if (buttonCallback_)
             buttonCallback_();

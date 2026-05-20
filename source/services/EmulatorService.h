@@ -125,6 +125,32 @@ public:
         ppuRenderer_->start();
     }
 
+    void resetCore() {
+        pendingSaveState_.reset();
+        initCore();
+    }
+
+    void importFlash(const juce::File& file) {
+        juce::MemoryBlock bytes;
+        if (!file.loadFileAsData(bytes)) return;
+        flashFile_.getFile().replaceWithData(bytes.getData(), bytes.getSize());
+        if (flashBackup_) flashBackup_->Reset();
+    }
+
+    void clearFlash() {
+        constexpr size_t kFlashSize = 131072;  // FLASH_128K
+        juce::MemoryBlock empty(kFlashSize);
+        empty.fillWith(0xFF);  // erased FLASH default state
+        flashFile_.getFile().replaceWithData(empty.getData(), empty.getSize());
+        if (flashBackup_) flashBackup_->Reset();
+    }
+
+    bool exportFlash(const juce::File& file) {
+        juce::MemoryBlock bytes;
+        if (!flashFile_.getFile().loadFileAsData(bytes)) return false;
+        return file.replaceWithData(bytes.getData(), bytes.getSize());
+    }
+
     void getState(juce::MemoryBlock& destData) {
         juce::MemoryBlock flashBytes;
         flashFile_.getFile().loadFileAsData(flashBytes);

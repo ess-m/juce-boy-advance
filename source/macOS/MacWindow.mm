@@ -77,5 +77,12 @@ void setTitlebarColor(void* nativeHandle, juce::Colour color) {
     WindowStyler* styler = getStyler();
     styler.titlebarColor = juceToNSColor(color);
     window.backgroundColor = styler.titlebarColor;
+
+    if (@available(macOS 10.14, *)) {
+        NSString* appearanceName = color.getPerceivedBrightness() > 0.5f
+                                     ? NSAppearanceNameAqua
+                                     : NSAppearanceNameDarkAqua;
+        window.appearance = [NSAppearance appearanceNamed:appearanceName];
+    }
 }
 }

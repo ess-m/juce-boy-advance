@@ -16,17 +16,16 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     , processor_(p)
     , vblankAttachment_(this, [this] { onVBlank(); })
 {
-    setSize(SCREEN_W * 3.25 + WINDOW_MARGIN_W * 3.25, SCREEN_H * 3.25 + WINDOW_MARGIN_H * 3.25);
+    setSize(
+        static_cast<int>(SCREEN_W * 3.25 + WINDOW_MARGIN_W * 3.25), 
+        static_cast<int>(SCREEN_H * 3.25 + WINDOW_MARGIN_H * 3.25)
+    );
     setResizable(true, false);
     setResizeLimits(
         SCREEN_W + WINDOW_MARGIN_W, 
         SCREEN_H + WINDOW_MARGIN_H, 
         SCREEN_W * 16 + WINDOW_MARGIN_W * 16, 
         SCREEN_H * 16 + WINDOW_MARGIN_H * 16
-    );
-    
-    getConstrainer()->setFixedAspectRatio(
-        static_cast<float>(SCREEN_W + WINDOW_MARGIN_W) / static_cast<float>(SCREEN_H + WINDOW_MARGIN_H)
     );
 
     setWantsKeyboardFocus(true);
@@ -37,15 +36,78 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 
     addAndMakeVisible(zoomMenu_);
     zoomMenu_.setButtonCallback([this] {
-        // TODO: popup menu
+        juce::PopupMenu menu;
+        menu.setLookAndFeel(&popupLook_);
+
+        menu.addSectionHeader("scale");
+        menu.addSeparator();
+
+        for (int idx = 1; idx <= 4; ++idx) {
+            menu.addItem(idx, juce::String::charToString(0x00D7) + " " + juce::String(idx));
+        }
+
+        menu.showMenuAsync(
+            juce::PopupMenu::Options()
+                .withParentComponent(this)
+                .withTargetComponent(zoomMenu_), 
+            [this](int result) {
+                if (result > 0) {                    
+                    resized();
+                }
+            }
+        );
     });
     zoomMenu_.setThemeProvider(themeProvider);
 
     addAndMakeVisible(configMenu_);
     configMenu_.setButtonCallback([this] {
-        // TODO: popup menu
+        juce::PopupMenu menu;
+        menu.setLookAndFeel(&popupLook_);
+
+        menu.addSectionHeader("config");
+        menu.addSeparator();
+
+        menu.addItem(1, "input");
+
+        if (processor_.wrapperType == juce::AudioProcessor::wrapperType_Standalone)
+            menu.addItem(2, "audio");
+
+        menu.addSeparator();
+        menu.addSectionHeader("state");
+        menu.addSeparator();
+
+        menu.addItem(3, "restart");
+        menu.addItem(4, "import");
+        menu.addItem(5, "export");
+        menu.addItem(6, "clear");
+
+        menu.showMenuAsync(
+            juce::PopupMenu::Options()
+                .withParentComponent(this)
+                .withTargetComponent(configMenu_),
+            [this](int result) {
+                switch (result) {
+                    case 3: restartCore(); break;
+                    case 4: importSave(); break;
+                    case 5: exportSave(); break;
+                    case 6: clearSaveData(); break;
+                    default: break;
+                }
+            }
+        );
     });
     configMenu_.setThemeProvider(themeProvider);
+
+    popupLook_.setThemeProvider(themeProvider);
+
+    addAndMakeVisible(zoomHover_);
+    zoomHover_.setTargetComponent(&zoomMenu_);
+    zoomHover_.setThemeProvider(themeProvider);
+    zoomHover_.setColorField(&ThemeColors::bg);
+
+    addAndMakeVisible(configHover_);
+    configHover_.setTargetComponent(&configMenu_);
+    configHover_.setThemeProvider(themeProvider);    
 }
 
 PluginEditor::~PluginEditor() {
@@ -82,6 +144,9 @@ void PluginEditor::resized() {
     
     zoomMenu_.setBounds(getWidth() - 36, getHeight() - 36, 36, 36);
     configMenu_.setBounds(getWidth() - 36, getHeight() - 72, 36, 36);
+
+    zoomHover_.setBounds(getWidth() - 36, getHeight() - 36, 36, 36);
+    configHover_.setBounds(getWidth() - 36, getHeight() - 72, 36, 36);
 }
 
 bool PluginEditor::keyStateChanged(bool /*isKeyDown*/) {
@@ -106,11 +171,24 @@ void PluginEditor::parentHierarchyChanged() {
                 if (const auto* topLevel = safeThis->getTopLevelComponent()) {
                     if (const auto* peer = topLevel->getPeer()) {
                         MacWindow::styleWindow(peer->getNativeHandle());
-                        MacWindow::setTitlebarColor(peer->getNativeHandle(), juce::Colours::black);
                     }
                 }
             });
         }
     }
     #endif
+}
+
+void PluginEditor::syncTitlebarColor() {
+#if JUCE_MAC && JUCE_STANDALONE_APPLICATION && !DEBUG
+    const auto bg = processor_.getEmulator().getThemeColors().bg;
+    if (bg == lastTitlebarColor_) return;
+
+    if (const auto* topLevel = getTopLevelComponent()) {
+        if (const auto* peer = topLevel->getPeer()) {
+            MacWindow::setTitlebarColor(peer->getNativeHandle(), bg);
+            lastTitlebarColor_ = bg;
+        }
+    }
+#endif
 }

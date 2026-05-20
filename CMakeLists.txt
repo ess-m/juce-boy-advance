@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.25)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "" FORCE)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-project(JuceBoyAdvance VERSION 0.1.0)
+project(FMS VERSION 0.1.0)
 
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 
@@ -50,6 +50,7 @@ juce_add_binary_data(${PROJECT_NAME}_BinaryData
     SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/bios/gba_bios.bin
         ${CMAKE_CURRENT_SOURCE_DIR}/rom/fms-plugin.gba
+        ${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/ui-font.otf
 )
 
 juce_add_plugin(${PROJECT_NAME}
