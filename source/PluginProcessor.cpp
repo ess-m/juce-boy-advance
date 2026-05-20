@@ -14,7 +14,6 @@ PluginProcessor::PluginProcessor()
 PluginProcessor::~PluginProcessor() = default;
 
 void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
-    DBG("prepareToPlay: sampleRate=" << sampleRate << " blockSize=" << samplesPerBlock);
     emulator_.prepare(sampleRate, samplesPerBlock);
     setLatencySamples(emulator_.calculateLatencySamples(sampleRate));
 }

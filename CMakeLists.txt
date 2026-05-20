@@ -54,12 +54,12 @@ juce_add_binary_data(${PROJECT_NAME}_BinaryData
 
 juce_add_plugin(${PROJECT_NAME}
     COMPANY_NAME "Lo-Bit Club"
-    BUNDLE_ID "com.lobit.jba"
+    BUNDLE_ID "com.lobit.fms"
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE LOBT
     PLUGIN_CODE LJBA
     FORMATS Standalone AU VST3 CLAP
-    PRODUCT_NAME "JuceBoyAdvance"
+    PRODUCT_NAME "FMS"
     IS_SYNTH TRUE
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT FALSE
@@ -69,7 +69,7 @@ juce_add_plugin(${PROJECT_NAME}
 )
 
 clap_juce_extensions_plugin(TARGET ${PROJECT_NAME}
-    CLAP_ID "com.lobit.jba"
+    CLAP_ID "com.lobit.fms"
     CLAP_FEATURES instrument synthesizer
 )
 
@@ -95,7 +95,6 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0
-    PRODUCT_NAME_WITHOUT_VERSION="JuceBoyAdvance"    
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

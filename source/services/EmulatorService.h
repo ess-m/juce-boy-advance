@@ -18,6 +18,7 @@
 
 #include "AudioService.h"
 #include "InputService.h"
+#include "ThemeColors.h"
 #include "VideoService.h"
 #include "adapters/JuceAudioDevice.h"
 #include "adapters/JuceVideoDevice.h"
@@ -169,6 +170,29 @@ public:
                 }
             }
         }
+    }
+
+    ThemeColors getThemeColors() const {
+        if (!core_) return {};
+        const auto* pram = core_->GetPRAM();
+        if (!pram) return {};
+
+        const auto readColor = [pram](int offset) {
+            const auto bgr15 = static_cast<uint16_t>(pram[offset] | (pram[offset + 1] << 8));
+            const auto expand = [](int v) { return juce::uint8((v << 3) | (v >> 2)); };
+            return juce::Colour(
+                expand( bgr15 & 0x1F),
+                expand((bgr15 >> 5) & 0x1F),
+                expand((bgr15 >> 10) & 0x1F)
+            );
+        };
+
+        return {
+            .bg = readColor(0),
+            .lo = readColor(2),
+            .hi = readColor(34),
+            .accent = readColor(6),
+        };
     }
 
     int calculateLatencySamples(double hostSampleRate) const {
