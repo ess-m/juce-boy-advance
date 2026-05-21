@@ -51,7 +51,13 @@ PluginEditor::PluginEditor(PluginProcessor& p)
                 .withParentComponent(this)
                 .withTargetComponent(zoomMenu_), 
             [this](int result) {
-                if (result > 0) {                    
+                if (result > 0) {               
+                    const float factor = (result + .25f);
+
+                    setSize(
+                        static_cast<int>(SCREEN_W * factor + WINDOW_MARGIN_W * factor), 
+                        static_cast<int>(SCREEN_H * factor + WINDOW_MARGIN_H * factor)
+                    );
                     resized();
                 }
             }
@@ -157,7 +163,7 @@ bool PluginEditor::keyStateChanged(bool /*isKeyDown*/) {
 void PluginEditor::parentHierarchyChanged() {
     AudioProcessorEditor::parentHierarchyChanged();
 
-    #if JUCE_MAC && JUCE_STANDALONE_APPLICATION &&!DEBUG
+    #if JUCE_STANDALONE_APPLICATION && !DEBUG
     static bool windowStyled = false;
 
     if (!windowStyled) {
@@ -165,6 +171,7 @@ void PluginEditor::parentHierarchyChanged() {
             topLevel->setUsingNativeTitleBar(true);
             windowStyled = true;
 
+            #if JUCE_MAC
             juce::MessageManager::callAsync([safeThis = SafePointer(this), this] {
                 if (safeThis == nullptr) return;
 
@@ -174,6 +181,7 @@ void PluginEditor::parentHierarchyChanged() {
                     }
                 }
             });
+            #endif
         }
     }
     #endif
