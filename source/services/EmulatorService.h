@@ -240,18 +240,37 @@ public:
 
         input_.syncToCore(*core_);
 
-        int rendered = 0;
+        // endSerial8 has no busy check, back-to-back calls choke siodata8 before the IRQ read
+        // 2048c covers transfer (512c) + IRQ entry/handler
+        constexpr int MIN_SERIAL_GAP = 2048;
+
+        const int totalCyclesForBlock = audio_.calcCycles(numSamples);
+        const int cyclesPerSampleNum = totalCyclesForBlock;
+        const int cyclesPerSampleDen = (numSamples > 0) ? numSamples : 1;
+
+        int cyclesRun = 0;
+        bool prevWasSerial = false;
 
         for (const auto& ev : events) {
-            if (ev.sampleOffset > rendered) {
-                core_->Run(audio_.calcCycles(ev.sampleOffset - rendered));
-                rendered = ev.sampleOffset;
+            int targetCycles = (ev.sampleOffset * cyclesPerSampleNum) / cyclesPerSampleDen;
+            if (targetCycles > totalCyclesForBlock) targetCycles = totalCyclesForBlock;
+
+            int runCycles = targetCycles - cyclesRun;
+
+            if (prevWasSerial && runCycles < MIN_SERIAL_GAP) {
+                runCycles = MIN_SERIAL_GAP;
+            }
+
+            if (runCycles > 0) {
+                core_->Run(runCycles);
+                cyclesRun += runCycles;
             }
             core_->SendSerial8(ev.value);
+            prevWasSerial = true;
         }
 
-        if (rendered < numSamples) {
-            core_->Run(audio_.calcCycles(numSamples - rendered));
+        if (cyclesRun < totalCyclesForBlock) {
+            core_->Run(totalCyclesForBlock - cyclesRun);
         }
         audioSampleSink_->render(buffer, numSamples);
 
@@ -262,4 +281,8 @@ public:
 
     InputService& getInput() { return input_; }
     VideoService& getVideo() { return video_; }
+
+    void setPluginAutomation(uint8_t bank, const uint8_t* slots5) {
+        if (core_) core_->SetPluginAutomation(bank, slots5);
+    }
 };

@@ -199,6 +199,13 @@ auto Bus::Hardware::ReadByte(u32 address) ->  u8 {
 
     case MGBA_LOG_ENABLE+0: return (u8)(mgba_log.enable >> 0);
     case MGBA_LOG_ENABLE+1: return (u8)(mgba_log.enable >> 8);
+
+    case 0x04FFC100: return plugin_automation[0]; // bank
+    case 0x04FFC101: return plugin_automation[1]; // FM 1 slot
+    case 0x04FFC102: return plugin_automation[2]; // FM 2 slot
+    case 0x04FFC103: return plugin_automation[3]; // FM 3 slot
+    case 0x04FFC104: return plugin_automation[4]; // FM 4 slot
+    case 0x04FFC105: return plugin_automation[5]; // Noise slot
   }
 
   return bus->ReadOpenBus(address);

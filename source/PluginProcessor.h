@@ -12,6 +12,8 @@
 
 class PluginProcessor final : public juce::AudioProcessor {
 private:
+    static constexpr int NUM_TRACKS = 5;
+
     EmulatorService emulator_;
 
     double lastPpq_ = 0.0;
@@ -19,6 +21,9 @@ private:
     bool ppqValid_ = false;
 
     std::vector<SyncEvent> syncEvents_;
+
+    juce::AudioParameterInt* patternParams_[NUM_TRACKS] {};
+    juce::AudioParameterInt* bankParam_ = nullptr;
 
     void buildSyncEvents(int numSamples);
 

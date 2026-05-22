@@ -167,11 +167,12 @@ void Bus::UpdateWaitStateTable() {
     wait32[s][0xA + i] = wait16[s][0xA] * 2;
     wait32[s][0xC + i] = wait16[s][0xC] * 2;
 
-    // SRAM
-    wait16[n][0xE + i] = sram;
-    wait32[n][0xE + i] = sram;
-    wait16[s][0xE + i] = sram;
-    wait32[s][0xE + i] = sram;
+    // SRAM / FLASH
+    (void)sram;
+    wait16[n][0xE + i] = 0;
+    wait32[n][0xE + i] = 0;
+    wait16[s][0xE + i] = 0;
+    wait32[s][0xE + i] = 0;
   }
 }
 

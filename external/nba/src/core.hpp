@@ -32,6 +32,7 @@ struct Core final : CoreBase {
   void CopyState(SaveState& state) override;
   void SetKeyStatus(Key key, bool pressed) override;
   void SendSerial8(u8 value) override;
+  void SetPluginAutomation(u8 bank, u8 const* slots5) override;
   void Run(int cycles) override;
 
   auto GetROM() -> ROM& override;

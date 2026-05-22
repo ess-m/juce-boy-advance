@@ -9,6 +9,26 @@ PluginProcessor::PluginProcessor()
     : AudioProcessor(BusesProperties().withOutput("Main", juce::AudioChannelSet::stereo()))
 {
     syncEvents_.reserve(64); // max ticks per block
+
+    static const char* trackNames[NUM_TRACKS] = {
+        "FM 1", "FM 2", "FM 3", "FM 4", "Noise"
+    };
+
+    for (int t = 0; t < NUM_TRACKS; ++t) {
+        patternParams_[t] = new juce::AudioParameterInt(
+            juce::ParameterID { "pattern_" + juce::String(t), 1 },
+            juce::String("Pattern ") + trackNames[t],
+            0, 15, 0
+        );
+        addParameter(patternParams_[t]);
+    }
+
+    bankParam_ = new juce::AudioParameterInt(
+        juce::ParameterID { "bank", 1 },
+        "Bank",
+        0, 7, 0
+    );
+    addParameter(bankParam_);
 }
 
 PluginProcessor::~PluginProcessor() = default;
@@ -25,6 +45,15 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
 
     const int numSamples = buffer.getNumSamples();
     buildSyncEvents(numSamples);
+
+    const uint8_t bank = static_cast<uint8_t>(bankParam_->get());
+    
+    uint8_t slots[NUM_TRACKS];
+    for (int t = 0; t < NUM_TRACKS; ++t) {
+        slots[t] = static_cast<uint8_t>(patternParams_[t]->get());
+    }
+    emulator_.setPluginAutomation(bank, slots);
+
     emulator_.render(buffer, numSamples, syncEvents_);
 }
 

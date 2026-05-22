@@ -104,6 +104,8 @@ struct Bus {
     std::shared_ptr<Config> config;
     u32 audio_l_buffer_latch = 0;
 
+    u8 plugin_automation[6] = { 0, 0, 0, 0, 0, 0 };
+
     auto ReadByte(u32 address) ->  u8;
     auto ReadHalf(u32 address) -> u16;
     auto ReadWord(u32 address) -> u32;
