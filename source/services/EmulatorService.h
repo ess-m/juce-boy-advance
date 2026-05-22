@@ -282,7 +282,7 @@ public:
     InputService& getInput() { return input_; }
     VideoService& getVideo() { return video_; }
 
-    void setPluginAutomation(uint8_t bank, const uint8_t* slots5) {
-        if (core_) core_->SetPluginAutomation(bank, slots5);
+    void setPluginAutomation(uint8_t bank, const uint8_t* slots5, uint8_t resetMask) {
+        if (core_) core_->SetPluginAutomation(bank, slots5, resetMask);
     }
 };

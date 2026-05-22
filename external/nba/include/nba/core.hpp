@@ -49,7 +49,7 @@ struct CoreBase {
   virtual void SetKeyStatus(Key key, bool pressed) = 0;
   virtual void SendSerial8(u8 value) = 0;
   
-  virtual void SetPluginAutomation(u8 bank, u8 const* slots5) = 0;
+  virtual void SetPluginAutomation(u8 bank, u8 const* slots5, u8 resetMask) = 0;
   virtual void Run(int cycles) = 0;
 
   virtual auto GetROM() -> ROM& = 0;

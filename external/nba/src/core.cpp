@@ -80,13 +80,14 @@ void Core::SendSerial8(u8 value) {
   bus.SendSerial8(value);
 }
 
-void Core::SetPluginAutomation(u8 bank, u8 const* slots5) {
+void Core::SetPluginAutomation(u8 bank, u8 const* slots5, u8 resetMask) {
   bus.hw.plugin_automation[0] = bank;
   bus.hw.plugin_automation[1] = slots5[0];
   bus.hw.plugin_automation[2] = slots5[1];
   bus.hw.plugin_automation[3] = slots5[2];
   bus.hw.plugin_automation[4] = slots5[3];
   bus.hw.plugin_automation[5] = slots5[4];
+  bus.hw.plugin_automation[6] = resetMask;
 }
 
 void Core::Run(int cycles) {

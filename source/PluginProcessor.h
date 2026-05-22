@@ -23,6 +23,7 @@ private:
     std::vector<SyncEvent> syncEvents_;
 
     juce::AudioParameterInt* patternParams_[NUM_TRACKS] {};
+    juce::AudioParameterBool* resetParams_[NUM_TRACKS] {};
     juce::AudioParameterInt* bankParam_ = nullptr;
 
     void buildSyncEvents(int numSamples);
