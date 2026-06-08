@@ -95,12 +95,24 @@ PluginEditor::PluginEditor(PluginProcessor& p)
                 switch (result) {
                     case 1: {
                         if (!inputConfig_.isVisible()) {
+                            audioConfig_.hide();
                             inputConfig_.show();
                         } else {
                             inputConfig_.hide();
-                        }                    
+                        }
                         break;
                     }
+
+                    case 2: {
+                        if (!audioConfig_.isVisible()) {
+                            inputConfig_.hide();
+                            audioConfig_.show();
+                        } else {
+                            audioConfig_.hide();
+                        }
+                        break;
+                    }
+                    
                     case 3: restartCore(); break;
                     case 4: importSave(); break;
                     case 5: exportSave(); break;
@@ -125,6 +137,9 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     
     addChildComponent(inputConfig_);
     inputConfig_.setThemeProvider(themeProvider);
+
+    addChildComponent(audioConfig_);
+    audioConfig_.setThemeProvider(themeProvider);
 }
 
 PluginEditor::~PluginEditor() {
@@ -144,7 +159,7 @@ void PluginEditor::paint(juce::Graphics &g) {
     g.setImageResamplingQuality(juce::Graphics::lowResamplingQuality);
 
     
-    const float overlayAlpha = inputConfig_.getAlpha();
+    const float overlayAlpha = std::max(inputConfig_.getAlpha(), audioConfig_.getAlpha());
     g.setOpacity(1.f - overlayAlpha);
 
     g.drawImageAt(
@@ -173,6 +188,7 @@ void PluginEditor::resized() {
     configHover_.setBounds(getWidth() - 36, getHeight() - 72, 36, 36);
 
     inputConfig_.place(getWidth() / 2, getHeight() / 2);
+    audioConfig_.place(getWidth() / 2, getHeight() / 2);
 }
 
 bool PluginEditor::keyStateChanged(bool /*isKeyDown*/) {

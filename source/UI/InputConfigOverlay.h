@@ -12,8 +12,8 @@
 #include "services/InputService.h"
 #include "services/ThemeColors.h"
 #include "Font.h"
+#include "BackButton.h"
 #include "KeyMapButton.h"
-#include "MenuButton.h"
 #include "MenuLabel.h"
 #include "PopupLook.h"
 
@@ -70,13 +70,10 @@ public:
         controllerSelector_.place(280, 363, 200, 18);
         addAndMakeVisible(controllerSelector_);
 
-        closeButton_.setButtonCallback([this] { hide(); });
-        closeButton_.setBounds(0, 0, 18, 18);
-        addAndMakeVisible(closeButton_);
+        backButton_.setButtonCallback([this] { hide(); });
+        backButton_.setBounds(0, 0, 18, 18);
+        addAndMakeVisible(backButton_);
 
-        // Match the addChildComponent(... hidden) starting state — the editor
-        // reads getAlpha() to fade the emulator image and would otherwise treat
-        // the overlay as fully open before show() is ever called.
         setAlpha(0.f);
 
         updater_.addAnimator(fadeAnimation_);
@@ -89,7 +86,7 @@ public:
     void show() {
         if (isVisible() && fadingIn_) return;
         fadingIn_ = true;
-        setAlpha(0.f);          // start invisible to avoid a one-frame flash
+        setAlpha(0.f);
         setVisible(true);
         toFront(true);
         fadeAnimation_.start();
@@ -111,7 +108,7 @@ public:
         for (auto& b : keyboardButtons_) b.setThemeProvider(themeProvider_);
         for (auto& b : gamepadButtons_) b.setThemeProvider(themeProvider_);
         controllerSelector_.setThemeProvider(themeProvider_);
-        closeButton_.setThemeProvider(themeProvider_);
+        backButton_.setThemeProvider(themeProvider_);
         popupLook_.setThemeProvider(themeProvider_);
         repaint();
     }
@@ -129,72 +126,6 @@ private:
         nba::Key::Left,   nba::Key::Right,
     };
 
-    struct CloseButton : MenuButton {
-        CloseButton() {
-            updater_.addAnimator(hoverAnimation_);
-        }
-
-        ~CloseButton() override {
-            updater_.removeAnimator(hoverAnimation_);
-        }
-
-        void paint(juce::Graphics& g) override {
-            const auto colors = getColors();
-
-            g.setColour(colors.lo.withAlpha(1.f - hoverValue_));
-            g.fillRoundedRectangle(0.f, 0.f, 18.f, 18.f, 2.f);
-
-            g.setColour(colors.lo.withAlpha(hoverValue_));
-            g.drawRoundedRectangle(0.5f, 0.5f, 17.f, 17.f, 2.f, 1.f);
-
-            g.setColour(colors.bg.interpolatedWith(colors.lo, hoverValue_));
-
-            juce::Path p;
-
-            p.startNewSubPath(9, 3);
-            p.lineTo(9, 10);
-            p.lineTo(4.f, 6.5f);
-            p.closeSubPath();
-
-            g.fillPath(p);
-
-            p.clear();
-            p.startNewSubPath(8.f, 6.5f);
-            p.lineTo(13.5f, 6.5f);
-            p.lineTo(13.5f, 12.5f);
-            p.lineTo(5.f, 12.5f);
-
-            g.strokePath(p, juce::PathStrokeType(1.f));
-        }
-
-        void mouseEnter(const juce::MouseEvent&) override {
-            hovering_ = true;
-            hoverAnimation_.start();
-        }
-
-        void mouseExit(const juce::MouseEvent&) override {
-            hovering_ = false;
-            hoverAnimation_.start();
-        }
-
-    private:
-        bool hovering_ = false;
-        float hoverValue_ = 0.f;
-
-        juce::VBlankAnimatorUpdater updater_ { this };
-        juce::Animator hoverAnimation_ =
-            juce::ValueAnimatorBuilder{}
-                .withEasing(juce::Easings::createEaseInOut())
-                .withDurationMs(75)
-                .withValueChangedCallback([this](auto value) {
-                    hoverValue_ = hovering_
-                        ? static_cast<float>(value)
-                        : 1.f - static_cast<float>(value);
-                    repaint();
-                })
-                .build();
-    };
-
     InputService& input_;
     ThemeProvider themeProvider_;
     std::array<KeyMapButton, 10> keyboardButtons_;
@@ -202,7 +133,7 @@ private:
 
     PopupLook popupLook_;
     MenuLabel controllerSelector_;
-    CloseButton closeButton_;
+    BackButton backButton_;
 
     bool fadingIn_ = false;
     juce::VBlankAnimatorUpdater updater_ { this };
