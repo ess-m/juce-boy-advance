@@ -17,29 +17,19 @@
 
 class InputService : private juce::Timer {
 private:
-    struct KeyboardMapping {
-        int juceKeyCode;
-        nba::Key gbaKey;
-    };
+    static constexpr size_t kKeyCount = static_cast<size_t>(nba::Key::Count);
 
-    static inline const KeyboardMapping kKeyboardMappings[] = {
-        { 's', nba::Key::A },
-        { 'a', nba::Key::B },
-        { 'u', nba::Key::Start },
-        { 'o', nba::Key::Select },
-        { 'i', nba::Key::Up },
-        { 'k', nba::Key::Down },
-        { 'j', nba::Key::Left },
-        { 'l', nba::Key::Right },
-        { 'q', nba::Key::L },
-        { 'e', nba::Key::R },
-    };
+    std::array<int, kKeyCount> keyboardMap_{};
+    std::array<int, kKeyCount> gamepadMap_{};
 
-    std::array<std::atomic<bool>, static_cast<size_t>(nba::Key::Count)> keyboard_{};
-    std::array<std::atomic<bool>, static_cast<size_t>(nba::Key::Count)> gamepad_{};
+    std::array<std::atomic<bool>, kKeyCount> keyboard_{};
+    std::array<std::atomic<bool>, kKeyCount> gamepad_{};
 
     SDL_GameController* controller_ = nullptr;
     bool sdlInitialized_ = false;
+    bool autoSelectController_ = true;
+
+    std::function<void(int sdlButton)> gamepadCaptureCallback_;
 
     void openFirstController() {
         for (int i = 0; i < SDL_NumJoysticks(); ++i) {
@@ -68,32 +58,62 @@ private:
         }
 
         if (!controller_) {
-            openFirstController();
+            if (autoSelectController_) openFirstController();
             if (!controller_) {
                 clearGamepadState();
                 return;
             }
         }
 
-        const auto setKey = [this](nba::Key key, SDL_GameControllerButton btn) {
-            const bool down = SDL_GameControllerGetButton(controller_, btn) != 0;
-            gamepad_[static_cast<size_t>(key)].store(down, std::memory_order_relaxed);
-        };
+        if (gamepadCaptureCallback_) {
+            for (int btn = 0; btn < SDL_CONTROLLER_BUTTON_MAX; ++btn) {
+                const auto sdlBtn = static_cast<SDL_GameControllerButton>(btn);
+                if (SDL_GameControllerGetButton(controller_, sdlBtn) != 0) {
+                    auto cb = std::move(gamepadCaptureCallback_);
+                    gamepadCaptureCallback_ = nullptr;
+                    clearGamepadState();
+                    cb(btn);
+                    return;
+                }
+            }
+            return;
+        }
 
-        setKey(nba::Key::A, SDL_CONTROLLER_BUTTON_B);
-        setKey(nba::Key::B, SDL_CONTROLLER_BUTTON_A);
-        setKey(nba::Key::Start, SDL_CONTROLLER_BUTTON_START);
-        setKey(nba::Key::Select, SDL_CONTROLLER_BUTTON_BACK);
-        setKey(nba::Key::Up, SDL_CONTROLLER_BUTTON_DPAD_UP);
-        setKey(nba::Key::Down, SDL_CONTROLLER_BUTTON_DPAD_DOWN);
-        setKey(nba::Key::Left, SDL_CONTROLLER_BUTTON_DPAD_LEFT);
-        setKey(nba::Key::Right, SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
-        setKey(nba::Key::L, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
-        setKey(nba::Key::R, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
+        for (size_t i = 0; i < kKeyCount; ++i) {
+            const int btn = gamepadMap_[i];
+            const bool down = btn >= 0
+                && SDL_GameControllerGetButton(
+                        controller_, static_cast<SDL_GameControllerButton>(btn)) != 0;
+            gamepad_[i].store(down, std::memory_order_relaxed);
+        }
     }
 
 public:
     InputService() {
+        keyboardMap_.fill(-1);
+        keyboardMap_[static_cast<size_t>(nba::Key::A)]      = 's';
+        keyboardMap_[static_cast<size_t>(nba::Key::B)]      = 'a';
+        keyboardMap_[static_cast<size_t>(nba::Key::Start)]  = 'u';
+        keyboardMap_[static_cast<size_t>(nba::Key::Select)] = 'o';
+        keyboardMap_[static_cast<size_t>(nba::Key::Up)]     = 'i';
+        keyboardMap_[static_cast<size_t>(nba::Key::Down)]   = 'k';
+        keyboardMap_[static_cast<size_t>(nba::Key::Left)]   = 'j';
+        keyboardMap_[static_cast<size_t>(nba::Key::Right)]  = 'l';
+        keyboardMap_[static_cast<size_t>(nba::Key::L)]      = 'q';
+        keyboardMap_[static_cast<size_t>(nba::Key::R)]      = 'e';
+
+        gamepadMap_.fill(-1);
+        gamepadMap_[static_cast<size_t>(nba::Key::A)]      = SDL_CONTROLLER_BUTTON_B;
+        gamepadMap_[static_cast<size_t>(nba::Key::B)]      = SDL_CONTROLLER_BUTTON_A;
+        gamepadMap_[static_cast<size_t>(nba::Key::Start)]  = SDL_CONTROLLER_BUTTON_START;
+        gamepadMap_[static_cast<size_t>(nba::Key::Select)] = SDL_CONTROLLER_BUTTON_BACK;
+        gamepadMap_[static_cast<size_t>(nba::Key::Up)]     = SDL_CONTROLLER_BUTTON_DPAD_UP;
+        gamepadMap_[static_cast<size_t>(nba::Key::Down)]   = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
+        gamepadMap_[static_cast<size_t>(nba::Key::Left)]   = SDL_CONTROLLER_BUTTON_DPAD_LEFT;
+        gamepadMap_[static_cast<size_t>(nba::Key::Right)]  = SDL_CONTROLLER_BUTTON_DPAD_RIGHT;
+        gamepadMap_[static_cast<size_t>(nba::Key::L)]      = SDL_CONTROLLER_BUTTON_LEFTSHOULDER;
+        gamepadMap_[static_cast<size_t>(nba::Key::R)]      = SDL_CONTROLLER_BUTTON_RIGHTSHOULDER;
+
         if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) == 0) {
             sdlInitialized_ = true;
             openFirstController();
@@ -110,9 +130,94 @@ public:
     }
 
     void pollKeyboard() {
-        for (const auto& [keyCode, gbaKey] : kKeyboardMappings) {
-            const bool down = juce::KeyPress::isKeyCurrentlyDown(keyCode);
-            keyboard_[static_cast<size_t>(gbaKey)].store(down, std::memory_order_relaxed);
+        for (size_t i = 0; i < kKeyCount; ++i) {
+            const int code = keyboardMap_[i];
+            const bool down = code >= 0 && juce::KeyPress::isKeyCurrentlyDown(code);
+            keyboard_[i].store(down, std::memory_order_relaxed);
+        }
+    }
+
+    void setKeyboardMapping(nba::Key gbaKey, int juceKeyCode) {
+        keyboardMap_[static_cast<size_t>(gbaKey)] = juceKeyCode;
+    }
+
+    int getKeyboardMapping(nba::Key gbaKey) const {
+        return keyboardMap_[static_cast<size_t>(gbaKey)];
+    }
+
+    void setGamepadMapping(nba::Key gbaKey, int sdlButton) {
+        gamepadMap_[static_cast<size_t>(gbaKey)] = sdlButton;
+    }
+
+    int getGamepadMapping(nba::Key gbaKey) const {
+        return gamepadMap_[static_cast<size_t>(gbaKey)];
+    }
+
+    void beginGamepadCapture(std::function<void(int sdlButton)> onCapture) {
+        gamepadCaptureCallback_ = std::move(onCapture);
+    }
+
+    void cancelGamepadCapture() {
+        gamepadCaptureCallback_ = nullptr;
+    }
+
+    std::vector<std::pair<int, juce::String>> enumerateControllers() {
+        std::vector<std::pair<int, juce::String>> result;
+        if (!sdlInitialized_) return result;
+
+        SDL_GameControllerUpdate();
+        for (int i = 0; i < SDL_NumJoysticks(); ++i) {
+            if (!SDL_IsGameController(i)) continue;
+            const char* name = SDL_GameControllerNameForIndex(i);
+            result.emplace_back(i, name != nullptr ? juce::String(name) : juce::String("Unknown"));
+        }
+        return result;
+    }
+
+    void selectController(int joystickIndex) {
+        autoSelectController_ = false;
+
+        if (controller_) {
+            SDL_GameControllerClose(controller_);
+            controller_ = nullptr;
+            clearGamepadState();
+        }
+
+        if (joystickIndex >= 0 && SDL_IsGameController(joystickIndex)) {
+            controller_ = SDL_GameControllerOpen(joystickIndex);
+        }
+    }
+
+    juce::String getCurrentControllerName() const {
+        if (controller_ == nullptr) return "None";
+        const char* name = SDL_GameControllerName(controller_);
+        return name != nullptr ? juce::String(name) : juce::String("Unknown");
+    }
+
+    int getCurrentControllerJoystickId() const {
+        if (controller_ == nullptr) return -1;
+        auto* j = SDL_GameControllerGetJoystick(controller_);
+        return j != nullptr ? SDL_JoystickInstanceID(j) : -1;
+    }
+
+    static juce::String gamepadButtonName(int sdlButton) {
+        switch (sdlButton) {
+            case SDL_CONTROLLER_BUTTON_A: return "A";
+            case SDL_CONTROLLER_BUTTON_B: return "B";
+            case SDL_CONTROLLER_BUTTON_X: return "X";
+            case SDL_CONTROLLER_BUTTON_Y: return "Y";
+            case SDL_CONTROLLER_BUTTON_BACK: return "Back";
+            case SDL_CONTROLLER_BUTTON_GUIDE: return "Guide";
+            case SDL_CONTROLLER_BUTTON_START: return "Start";
+            case SDL_CONTROLLER_BUTTON_LEFTSTICK: return "L Stick";
+            case SDL_CONTROLLER_BUTTON_RIGHTSTICK: return "R Stick";
+            case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: return "LB";
+            case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: return "RB";
+            case SDL_CONTROLLER_BUTTON_DPAD_UP: return "Up";
+            case SDL_CONTROLLER_BUTTON_DPAD_DOWN: return "Down";
+            case SDL_CONTROLLER_BUTTON_DPAD_LEFT: return "Left";
+            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: return "Right";
+            default: return "?";
         }
     }
 

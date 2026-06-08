@@ -10,6 +10,7 @@
 #include "UI/HoverBracket.h"
 #include "UI/PopupLook.h"
 #include "UI/ZoomMenuButton.h"
+#include "UI/InputConfigOverlay.h"
 
 class PluginEditor final : public juce::AudioProcessorEditor {
 public:
@@ -28,6 +29,8 @@ private:
 
     ConfigMenuButton configMenu_;
     ZoomMenuButton zoomMenu_;
+
+    InputConfigOverlay inputConfig_ { processor_.getEmulator().getInput() };
     
     HoverBracket configHover_;
     HoverBracket zoomHover_;

@@ -93,6 +93,14 @@ PluginEditor::PluginEditor(PluginProcessor& p)
                 .withTargetComponent(configMenu_),
             [this](int result) {
                 switch (result) {
+                    case 1: {
+                        if (!inputConfig_.isVisible()) {
+                            inputConfig_.show();
+                        } else {
+                            inputConfig_.hide();
+                        }                    
+                        break;
+                    }
                     case 3: restartCore(); break;
                     case 4: importSave(); break;
                     case 5: exportSave(); break;
@@ -113,7 +121,10 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 
     addAndMakeVisible(configHover_);
     configHover_.setTargetComponent(&configMenu_);
-    configHover_.setThemeProvider(themeProvider);    
+    configHover_.setThemeProvider(themeProvider);
+    
+    addChildComponent(inputConfig_);
+    inputConfig_.setThemeProvider(themeProvider);
 }
 
 PluginEditor::~PluginEditor() {
@@ -131,11 +142,18 @@ void PluginEditor::paint(juce::Graphics &g) {
     g.fillAll(borderColor_.load());    
 
     g.setImageResamplingQuality(juce::Graphics::lowResamplingQuality);
+
+    
+    const float overlayAlpha = inputConfig_.getAlpha();
+    g.setOpacity(1.f - overlayAlpha);
+
     g.drawImageAt(
         frame,
         inner.getX() + (inner.getWidth()  - frame.getWidth())  / 2,
         inner.getY() + (inner.getHeight() - frame.getHeight()) / 2
     );
+
+    g.setOpacity(1.f);
 }
 
 void PluginEditor::resized() {
@@ -153,6 +171,8 @@ void PluginEditor::resized() {
 
     zoomHover_.setBounds(getWidth() - 36, getHeight() - 36, 36, 36);
     configHover_.setBounds(getWidth() - 36, getHeight() - 72, 36, 36);
+
+    inputConfig_.place(getWidth() / 2, getHeight() / 2);
 }
 
 bool PluginEditor::keyStateChanged(bool /*isKeyDown*/) {

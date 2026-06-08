@@ -88,10 +88,13 @@ public:
         g.drawText(text, area, juce::Justification::centred, true);
     }
 
-    void getIdealPopupMenuItemSize(const juce::String&, bool separator,
+    void getIdealPopupMenuItemSize(const juce::String& text, bool separator,
                                    int, int &idealWidth,
                                    int &idealHeight) override {
-        idealWidth = 110;
+                                    
+        const int textWidth = juce::GlyphArrangement::getStringWidthInt(getPopupMenuFont(), text);
+
+        idealWidth = std::max(110, textWidth + 24);
         idealHeight = separator ? 3 : 30;
     }
 

@@ -76,6 +76,8 @@ private:
     void paint(juce::Graphics &g) override {
         if (hoverValue_ > 0.f) {
             const float h = hoverValue_ * 2.f;
+            const float rx = static_cast<float>(getWidth()) - 8.f;
+            const float ry = static_cast<float>(getHeight()) - 8.f;
 
             juce::Path p;
             g.setColour(getColors().*colorField_);
@@ -93,7 +95,7 @@ private:
             p.lineTo(2.5f, 5.5f);
             p.lineTo(6.f, 5.5f);
 
-            transform = juce::AffineTransform::translation(-2.f + h, 2.f - h + 28.f);
+            transform = juce::AffineTransform::translation(-2.f + h, 2.f - h + ry);
 
             g.strokePath(p, juce::PathStrokeType(1.f), transform);
             p.clear();
@@ -102,7 +104,7 @@ private:
             p.lineTo(5.5f, 5.5f);
             p.lineTo(5.5f, 2.f);
 
-            transform = juce::AffineTransform::translation(2.f - h + 28.f, 2.f - h + 28.f);
+            transform = juce::AffineTransform::translation(2.f - h + rx, 2.f - h + ry);
 
             g.strokePath(p, juce::PathStrokeType(1.f), transform);
             p.clear();
@@ -111,7 +113,7 @@ private:
             p.lineTo(5.5f, 2.5f);
             p.lineTo(2.f, 2.5f);
 
-            transform = juce::AffineTransform::translation(2.f - h + 28.f, -2.f + h);
+            transform = juce::AffineTransform::translation(2.f - h + rx, -2.f + h);
 
             g.strokePath(p, juce::PathStrokeType(1.f), transform);
             p.clear();
