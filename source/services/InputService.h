@@ -8,8 +8,11 @@
 #include <atomic>
 
 #include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
 #include <juce_events/juce_events.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+
+#include "UserSettings.h"
 
 #include <SDL.h>
 
@@ -29,7 +32,43 @@ private:
     bool sdlInitialized_ = false;
     bool autoSelectController_ = true;
 
+    juce::String persistedControllerName_;
     std::function<void(int sdlButton)> gamepadCaptureCallback_;
+
+    void saveSettings() {
+        auto& f = UserSettings::file();
+        for (uint8_t i = 0; i < kKeyCount; ++i) {
+            f.setValue("kb_" + juce::String(static_cast<int>(i)), keyboardMap_[i]);
+            f.setValue("gp_" + juce::String(static_cast<int>(i)), gamepadMap_[i]);
+        }
+        f.setValue("auto_controller", autoSelectController_);
+        f.setValue("controller_name", getCurrentControllerName());
+        f.saveIfNeeded();
+    }
+
+    void loadSettings() {
+        auto& f = UserSettings::file();
+        for (uint8_t i = 0; i < kKeyCount; ++i) {
+            const auto kKey = "kb_" + juce::String(static_cast<int>(i));
+            const auto gKey = "gp_" + juce::String(static_cast<int>(i));
+            if (f.containsKey(kKey)) keyboardMap_[i] = f.getIntValue(kKey, keyboardMap_[i]);
+            if (f.containsKey(gKey)) gamepadMap_[i]  = f.getIntValue(gKey, gamepadMap_[i]);
+        }
+        autoSelectController_ = f.getBoolValue("auto_controller", true);
+        persistedControllerName_ = f.getValue("controller_name", "");
+    }
+
+    bool openControllerByName(const juce::String& wanted) {
+        for (int i = 0; i < SDL_NumJoysticks(); ++i) {
+            if (!SDL_IsGameController(i)) continue;
+            const char* n = SDL_GameControllerNameForIndex(i);
+            if (n != nullptr && juce::String(n) == wanted) {
+                controller_ = SDL_GameControllerOpen(i);
+                if (controller_) return true;
+            }
+        }
+        return false;
+    }
 
     void openFirstController() {
         for (int i = 0; i < SDL_NumJoysticks(); ++i) {
@@ -114,9 +153,22 @@ public:
         gamepadMap_[static_cast<size_t>(nba::Key::L)]      = SDL_CONTROLLER_BUTTON_LEFTSHOULDER;
         gamepadMap_[static_cast<size_t>(nba::Key::R)]      = SDL_CONTROLLER_BUTTON_RIGHTSHOULDER;
 
+        // defaults
+        loadSettings();
+
         if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) == 0) {
             sdlInitialized_ = true;
-            openFirstController();
+
+            // load saved settings
+            if (!autoSelectController_) {
+                if (persistedControllerName_.isNotEmpty()
+                    && persistedControllerName_ != "None") {
+                    openControllerByName(persistedControllerName_);
+                }
+            } else {
+                openFirstController();
+            }
+
             startTimerHz(60);
         } else {
             DBG("SDL_InitSubSystem(GAMECONTROLLER) failed: " << SDL_GetError());
@@ -139,6 +191,7 @@ public:
 
     void setKeyboardMapping(nba::Key gbaKey, int juceKeyCode) {
         keyboardMap_[static_cast<size_t>(gbaKey)] = juceKeyCode;
+        saveSettings();
     }
 
     int getKeyboardMapping(nba::Key gbaKey) const {
@@ -147,6 +200,7 @@ public:
 
     void setGamepadMapping(nba::Key gbaKey, int sdlButton) {
         gamepadMap_[static_cast<size_t>(gbaKey)] = sdlButton;
+        saveSettings();
     }
 
     int getGamepadMapping(nba::Key gbaKey) const {
@@ -186,6 +240,8 @@ public:
         if (joystickIndex >= 0 && SDL_IsGameController(joystickIndex)) {
             controller_ = SDL_GameControllerOpen(joystickIndex);
         }
+
+        saveSettings();
     }
 
     juce::String getCurrentControllerName() const {

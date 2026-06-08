@@ -4,6 +4,8 @@
 
 #include "PluginEditor.h"
 
+#include "services/UserSettings.h"
+
 #if JUCE_MAC
 #include "macOS/MacWindow.h"
 #endif
@@ -16,9 +18,11 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     , processor_(p)
     , vblankAttachment_(this, [this] { onVBlank(); })
 {
+    const int savedScale = juce::jlimit(1, 4, UserSettings::file().getIntValue("scale", 3));
+    const float startFactor = static_cast<float>(savedScale) + 0.25f;
     setSize(
-        static_cast<int>(SCREEN_W * 3.25 + WINDOW_MARGIN_W * 3.25), 
-        static_cast<int>(SCREEN_H * 3.25 + WINDOW_MARGIN_H * 3.25)
+        static_cast<int>(SCREEN_W * startFactor + WINDOW_MARGIN_W * startFactor),
+        static_cast<int>(SCREEN_H * startFactor + WINDOW_MARGIN_H * startFactor)
     );
     setResizable(true, false);
     setResizeLimits(
@@ -51,14 +55,17 @@ PluginEditor::PluginEditor(PluginProcessor& p)
                 .withParentComponent(this)
                 .withTargetComponent(zoomMenu_), 
             [this](int result) {
-                if (result > 0) {               
+                if (result > 0) {
                     const float factor = (result + .25f);
 
                     setSize(
-                        static_cast<int>(SCREEN_W * factor + WINDOW_MARGIN_W * factor), 
+                        static_cast<int>(SCREEN_W * factor + WINDOW_MARGIN_W * factor),
                         static_cast<int>(SCREEN_H * factor + WINDOW_MARGIN_H * factor)
                     );
                     resized();
+
+                    UserSettings::file().setValue("scale", result);
+                    UserSettings::file().saveIfNeeded();
                 }
             }
         );
