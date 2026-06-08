@@ -41,7 +41,7 @@ public:
         addAndMakeVisible(bufferSizeSelector_);
 
         deviceSelector_.setTextProvider([this] {
-            return getCurrentDeviceName().upToFirstOccurrenceOf(" ", false, false);
+            return getCurrentDeviceName().upToFirstOccurrenceOf("(", false, false);
         });
 
         deviceSelector_.setOnClick([this] { showDeviceMenu(); });

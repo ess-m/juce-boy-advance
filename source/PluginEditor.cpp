@@ -158,7 +158,6 @@ void PluginEditor::paint(juce::Graphics &g) {
 
     g.setImageResamplingQuality(juce::Graphics::lowResamplingQuality);
 
-    
     const float overlayAlpha = std::min(1.f, inputConfig_.getAlpha() + audioConfig_.getAlpha());
     g.setOpacity(1.f - overlayAlpha);
 
