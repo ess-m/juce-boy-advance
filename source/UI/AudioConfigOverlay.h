@@ -27,7 +27,7 @@ public:
 
         sampleRateSelector_.setOnClick([this] { showSampleRateMenu(); });
         sampleRateSelector_.setJustification(juce::Justification::right);
-        sampleRateSelector_.place(280, 80, 200, 18);
+        sampleRateSelector_.place(280, 45, 200, 18);
         addAndMakeVisible(sampleRateSelector_);
 
         bufferSizeSelector_.setTextProvider([this] {
@@ -37,7 +37,7 @@ public:
 
         bufferSizeSelector_.setOnClick([this] { showBufferSizeMenu(); });
         bufferSizeSelector_.setJustification(juce::Justification::right);
-        bufferSizeSelector_.place(280, 105, 200, 18);
+        bufferSizeSelector_.place(280, 70, 200, 18);
         addAndMakeVisible(bufferSizeSelector_);
 
         deviceSelector_.setTextProvider([this] {
@@ -46,7 +46,7 @@ public:
 
         deviceSelector_.setOnClick([this] { showDeviceMenu(); });
         deviceSelector_.setJustification(juce::Justification::right);
-        deviceSelector_.place(280, 130, 200, 18);
+        deviceSelector_.place(280, 95, 200, 18);
         addAndMakeVisible(deviceSelector_);
 
         backButton_.setButtonCallback([this] { hide(); });
@@ -239,9 +239,9 @@ private:
 
         g.fillRect(0, 25, 480, 1);
 
-        g.drawText("Sample rate",   0, 80,  200, 18, juce::Justification::left);
-        g.drawText("Buffer size",   0, 105, 200, 18, juce::Justification::left);
-        g.drawText("Output device", 0, 130, 200, 18, juce::Justification::left);
+        g.drawText("Sample rate",   0, 45,  200, 18, juce::Justification::left);
+        g.drawText("Buffer size",   0, 70, 200, 18, juce::Justification::left);
+        g.drawText("Output device", 0, 95, 200, 18, juce::Justification::left);
     }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioConfigOverlay)
