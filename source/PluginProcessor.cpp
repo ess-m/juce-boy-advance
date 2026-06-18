@@ -32,6 +32,15 @@ PluginProcessor::PluginProcessor()
         addParameter(resetParams_[t]);
     }
 
+    for (int t = 0; t < NUM_TRACKS; ++t) {
+        levelParams_[t] = new juce::AudioParameterInt(
+            juce::ParameterID { "level_" + juce::String(t), 1 },
+            juce::String("Level ") + trackNames[t],
+            0, 127, 127
+        );
+        addParameter(levelParams_[t]);
+    }
+
     bankParam_ = new juce::AudioParameterInt(
         juce::ParameterID { "bank", 1 },
         "Bank",
@@ -58,12 +67,15 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     const uint8_t bank = static_cast<uint8_t>(bankParam_->get());
 
     uint8_t slots[NUM_TRACKS];
+    uint8_t levels[NUM_TRACKS];
     uint8_t resetMask = 0;
+    
     for (int t = 0; t < NUM_TRACKS; ++t) {
         slots[t] = static_cast<uint8_t>(patternParams_[t]->get());
+        levels[t] = static_cast<uint8_t>(levelParams_[t]->get());
         if (resetParams_[t]->get()) resetMask |= (uint8_t)(1u << t);
     }
-    emulator_.setPluginAutomation(bank, slots, resetMask);
+    emulator_.setPluginAutomation(bank, slots, resetMask, levels);
 
     emulator_.render(buffer, numSamples, syncEvents_);
 }

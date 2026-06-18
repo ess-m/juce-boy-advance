@@ -104,8 +104,8 @@ struct Bus {
     std::shared_ptr<Config> config;
     u32 audio_l_buffer_latch = 0;
 
-    // [0] bank, [1..5] slot/track, [6] reset-on-load mask (bit t = track t)
-    u8 plugin_automation[7] = { 0, 0, 0, 0, 0, 0, 0 };
+    // [0] bank, [1..5] slot/track, [6] reset-on-load mask, [7..10] FM track level
+    u8 plugin_automation[11] = { 0, 0, 0, 0, 0, 0, 0, 127, 127, 127, 127 };
 
     auto ReadByte(u32 address) ->  u8;
     auto ReadHalf(u32 address) -> u16;

@@ -12,6 +12,7 @@
 #include <nba/config.hpp>
 #include <nba/save_state.hpp>
 #include <nba/scheduler.hpp>
+#include <atomic>
 #include <mutex>
 
 #include "hw/apu/channel/quad_channel.hpp"
@@ -71,6 +72,9 @@ struct APU {
   std::mutex buffer_mutex;
   std::shared_ptr<StereoRingBuffer<float>> buffer;
   std::unique_ptr<StereoResampler<float>> resampler;
+
+  std::atomic<u8> noise_level_ { 127 };
+  void SetNoiseLevel(u8 v) { noise_level_.store(v, std::memory_order_relaxed); }
 
 private:
   friend void AudioCallback(APU* apu, s16* stream, int byte_len);

@@ -282,7 +282,9 @@ public:
     InputService& getInput() { return input_; }
     VideoService& getVideo() { return video_; }
 
-    void setPluginAutomation(uint8_t bank, const uint8_t* slots5, uint8_t resetMask) {
-        if (core_) core_->SetPluginAutomation(bank, slots5, resetMask);
+    void setPluginAutomation(uint8_t bank, const uint8_t* slots5, uint8_t resetMask, const uint8_t* levels5) {
+        if (!core_) return;
+        core_->SetPluginAutomation(bank, slots5, resetMask, levels5);
+        core_->SetNoiseLevel(levels5[4]);
     }
 };

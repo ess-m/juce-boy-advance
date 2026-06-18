@@ -80,7 +80,7 @@ void Core::SendSerial8(u8 value) {
   bus.SendSerial8(value);
 }
 
-void Core::SetPluginAutomation(u8 bank, u8 const* slots5, u8 resetMask) {
+void Core::SetPluginAutomation(u8 bank, u8 const* slots5, u8 resetMask, u8 const* levels5) {
   bus.hw.plugin_automation[0] = bank;
   bus.hw.plugin_automation[1] = slots5[0];
   bus.hw.plugin_automation[2] = slots5[1];
@@ -88,6 +88,14 @@ void Core::SetPluginAutomation(u8 bank, u8 const* slots5, u8 resetMask) {
   bus.hw.plugin_automation[4] = slots5[3];
   bus.hw.plugin_automation[5] = slots5[4];
   bus.hw.plugin_automation[6] = resetMask;
+  bus.hw.plugin_automation[7] = levels5[0];
+  bus.hw.plugin_automation[8] = levels5[1];
+  bus.hw.plugin_automation[9] = levels5[2];
+  bus.hw.plugin_automation[10] = levels5[3];
+}
+
+void Core::SetNoiseLevel(u8 level) {
+  apu.SetNoiseLevel(level);
 }
 
 void Core::Run(int cycles) {

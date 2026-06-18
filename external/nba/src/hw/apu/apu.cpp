@@ -149,6 +149,8 @@ void APU::StepMixer() {
       if(psg.enable[channel][2]) psg_sample += mmio.psg3.GetSample();
       if(psg.enable[channel][3]) psg_sample += mmio.psg4.GetSample();
 
+      psg_sample = static_cast<s16>((static_cast<s32>(psg_sample) * noise_level_.load(std::memory_order_relaxed)) >> 7);
+
       sample[channel] += psg_sample * psg_volume * (psg.master[channel] + 1) * psg_gain / (32.0 * 0x200);
 
       /* TODO: we assume that MP2K sends right channel to FIFO A and left channel to FIFO B,
@@ -185,6 +187,8 @@ void APU::StepMixer() {
       if(psg.enable[channel][1]) psg_sample += mmio.psg2.GetSample();
       if(psg.enable[channel][2]) psg_sample += mmio.psg3.GetSample();
       if(psg.enable[channel][3]) psg_sample += mmio.psg4.GetSample();
+
+      psg_sample = static_cast<s16>((static_cast<s32>(psg_sample) * noise_level_.load(std::memory_order_relaxed)) >> 7);
 
       sample[channel] += psg_sample * psg_volume * (psg.master[channel] + 1) * psg_gain >> 5;
 

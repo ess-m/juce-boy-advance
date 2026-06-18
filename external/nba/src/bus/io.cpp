@@ -207,6 +207,10 @@ auto Bus::Hardware::ReadByte(u32 address) ->  u8 {
     case 0x04FFC104: return plugin_automation[4]; // FM 4 slot
     case 0x04FFC105: return plugin_automation[5]; // Noise slot
     case 0x04FFC106: return plugin_automation[6]; // reset-on-load mask (bit t = track t)
+    case 0x04FFC107: return plugin_automation[7];  // FM 1 level
+    case 0x04FFC108: return plugin_automation[8];  // FM 2 level
+    case 0x04FFC109: return plugin_automation[9];  // FM 3 level
+    case 0x04FFC10A: return plugin_automation[10]; // FM 4 level
   }
 
   return bus->ReadOpenBus(address);
