@@ -4,8 +4,6 @@
 
 #include "PluginEditor.h"
 
-#include "services/UserSettings.h"
-
 #if JUCE_MAC
 #include "macOS/MacWindow.h"
 #endif
@@ -18,7 +16,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     , processor_(p)
     , vblankAttachment_(this, [this] { onVBlank(); })
 {
-    const int savedScale = juce::jlimit(1, 4, UserSettings::file().getIntValue("scale", 3));
+    const int savedScale = juce::jlimit(1, 4, settings_->file().getIntValue("scale", 3));
     const float startFactor = static_cast<float>(savedScale) + 0.25f;
     setSize(
         static_cast<int>(SCREEN_W * startFactor + WINDOW_MARGIN_W * startFactor),
@@ -64,8 +62,8 @@ PluginEditor::PluginEditor(PluginProcessor& p)
                     );
                     resized();
 
-                    UserSettings::file().setValue("scale", result);
-                    UserSettings::file().saveIfNeeded();
+                    settings_->file().setValue("scale", result);
+                    settings_->file().saveIfNeeded();
                 }
             }
         );

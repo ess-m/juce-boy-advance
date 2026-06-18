@@ -6,6 +6,8 @@
 
 #include "PluginProcessor.h"
 
+#include "services/UserSettings.h"
+
 #include "UI/AudioConfigOverlay.h"
 #include "UI/ConfigMenuButton.h"
 #include "UI/HoverBracket.h"
@@ -27,6 +29,8 @@ public:
 private:
     PluginProcessor &processor_;
     juce::VBlankAttachment vblankAttachment_;
+
+    juce::SharedResourcePointer<UserSettings> settings_;
 
     ConfigMenuButton configMenu_;
     ZoomMenuButton zoomMenu_;

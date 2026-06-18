@@ -35,8 +35,10 @@ private:
     juce::String persistedControllerName_;
     std::function<void(int sdlButton)> gamepadCaptureCallback_;
 
+    juce::SharedResourcePointer<UserSettings> settings_;
+
     void saveSettings() {
-        auto& f = UserSettings::file();
+        auto& f = settings_->file();
         for (uint8_t i = 0; i < kKeyCount; ++i) {
             f.setValue("kb_" + juce::String(static_cast<int>(i)), keyboardMap_[i]);
             f.setValue("gp_" + juce::String(static_cast<int>(i)), gamepadMap_[i]);
@@ -47,7 +49,7 @@ private:
     }
 
     void loadSettings() {
-        auto& f = UserSettings::file();
+        auto& f = settings_->file();
         for (uint8_t i = 0; i < kKeyCount; ++i) {
             const auto kKey = "kb_" + juce::String(static_cast<int>(i));
             const auto gKey = "gp_" + juce::String(static_cast<int>(i));
