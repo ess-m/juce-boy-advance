@@ -12,7 +12,7 @@
 class PluginAudioSampleSink : public nba::AudioSampleSink {
 public:
     static constexpr int RING_SIZE = 4096;
-    static constexpr double ROM_SAMPLE_RATE = 32768.0;
+    static constexpr double ROM_SAMPLE_RATE = 65536.0;
 
     bool IsActive() const override { return active_; }
 

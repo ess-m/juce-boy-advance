@@ -690,7 +690,7 @@ void Bus::Hardware::WriteWord(u32 address, u32 value) {
         const auto* iram = bus->memory.iram.data();
         const auto* l = reinterpret_cast<const s8*>(iram + (audio_l_buffer_latch & 0x7FFF));
         const auto* r = reinterpret_cast<const s8*>(iram + (value & 0x7FFF));
-        sink->OnBufferReady(l, r, 256);
+        sink->OnBufferReady(l, r, 512);
       }
       break;
     }
