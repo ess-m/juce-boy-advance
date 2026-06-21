@@ -224,9 +224,9 @@ public:
     int calculateLatencySamples(double hostSampleRate) const {
         constexpr double romSampleRate = 65536.0;
         constexpr int bufferFillSamples = 512;
-        constexpr int ringDwellSamples = 128;
+        constexpr int ringDwellSamples = 256;
         constexpr int interpInputSamples = 2;
-        constexpr int renderExecSamples = 128;
+        constexpr int renderExecSamples = 256;
 
         const double seconds =
             (bufferFillSamples + ringDwellSamples + interpInputSamples + renderExecSamples) / romSampleRate;
