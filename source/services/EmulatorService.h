@@ -47,6 +47,9 @@ private:
     std::unique_ptr<nba::CoreBase> core_;
 
     juce::AudioBuffer<float> apuTempBuffer_;
+    juce::AudioBuffer<float> noiseDelay_;
+    int noiseDelayWrite_ = 0;
+    int noiseDelaySamples_ = 0;
 
     std::vector<uint8_t> biosData_;
 
@@ -104,6 +107,7 @@ public:
         audioSampleSink_->prepare(sampleRate, blockSize);
 
         apuTempBuffer_.setSize(2, blockSize);
+        setNoiseDelay(sampleRate, blockSize);
 
         if (!core_) {
             initCore();
@@ -275,8 +279,50 @@ public:
         audioSampleSink_->render(buffer, numSamples);
 
         audioDevice_->render(apuTempBuffer_, numSamples);
-        buffer.addFrom(0, 0, apuTempBuffer_, 0, 0, numSamples);
-        buffer.addFrom(1, 0, apuTempBuffer_, 1, 0, numSamples);
+        mixDelayedNoise(buffer, apuTempBuffer_, numSamples);
+    }
+
+    void setNoiseDelay(double sampleRate, int blockSize) {
+        noiseDelaySamples_ = calculateLatencySamples(sampleRate);
+        noiseDelay_.setSize(2, noiseDelaySamples_ + blockSize);
+        noiseDelay_.clear();
+        noiseDelayWrite_ = 0;
+    }
+
+    void mixDelayedNoise(juce::AudioBuffer<float>& out,
+                         const juce::AudioBuffer<float>& src,
+                         int numSamples) {
+        const int ringLen = noiseDelay_.getNumSamples();
+
+        if (ringLen == 0 || noiseDelaySamples_ == 0) {
+            out.addFrom(0, 0, src, 0, 0, numSamples);
+            out.addFrom(1, 0, src, 1, 0, numSamples);
+            return;
+        }
+
+        const float* srcL = src.getReadPointer(0);
+        const float* srcR = src.getReadPointer(1);
+        float* dstL = out.getWritePointer(0);
+        float* dstR = out.getWritePointer(1);
+        float* ringL = noiseDelay_.getWritePointer(0);
+        float* ringR = noiseDelay_.getWritePointer(1);
+
+        int w = noiseDelayWrite_;
+        int r = w - noiseDelaySamples_;
+        if (r < 0) r += ringLen;
+
+        for (int i = 0; i < numSamples; ++i) {
+            ringL[w] = srcL[i];
+            ringR[w] = srcR[i];
+
+            dstL[i] += ringL[r];
+            dstR[i] += ringR[r];
+
+            if (++w == ringLen) w = 0;
+            if (++r == ringLen) r = 0;
+        }
+
+        noiseDelayWrite_ = w;
     }
 
     InputService& getInput() { return input_; }
