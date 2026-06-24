@@ -16,12 +16,15 @@ public:
 
     bool IsActive() const override { return active_; }
 
+    uint64_t getBufferReadyCount() const { return bufferReadyCount_; }
+
     void OnBufferReady(const s8* left, const s8* right, int count) override {
         for (int i = 0; i < count; ++i) {
             ringL_[static_cast<size_t>(writeIdx_)] = static_cast<float>(left[i]) / 128.0f;
             ringR_[static_cast<size_t>(writeIdx_)] = static_cast<float>(right[i]) / 128.0f;
             writeIdx_ = (writeIdx_ + 1) % RING_SIZE;
         }
+        ++bufferReadyCount_;
     }
 
     void prepare(double hostSampleRate, int /*blockSize*/) {
@@ -87,6 +90,7 @@ private:
 
     int writeIdx_ = 0;
     int readIdx_ = 0;
+    uint64_t bufferReadyCount_ = 0;
 
     juce::CatmullRomInterpolator interpL_;
     juce::CatmullRomInterpolator interpR_;

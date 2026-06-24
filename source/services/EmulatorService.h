@@ -61,6 +61,11 @@ private:
     double lastSampleRate_ = 0.0;
     int lastBlockSize_ = 0;
 
+    uint64_t lastBufferReadyCount_ = 0;
+    int stalledBlockCount_ = 0;
+    bool watchdogArmed_ = false;
+    static constexpr int kWatchdogStallLimitBlocks = 16;
+
     void initCore() {
         core_ = nba::CreateCore(config_);
         core_->Attach(biosData_);
@@ -131,7 +136,51 @@ public:
 
     void resetCore() {
         pendingSaveState_.reset();
+        resetWatchdog();
         initCore();
+    }
+
+    void resetWatchdog() {
+        lastBufferReadyCount_ = audioSampleSink_ ? audioSampleSink_->getBufferReadyCount() : 0;
+        stalledBlockCount_ = 0;
+        watchdogArmed_ = false;
+    }
+
+    static uint32_t computeRomFingerprint() {
+        static const uint32_t cached = []{
+            const auto* bytes = reinterpret_cast<const uint8_t*>(BinaryData::fmsplugin_gba);
+            const auto size = BinaryData::fmsplugin_gbaSize;
+
+            uint32_t h = 0x811C9DC5u;
+            
+            for (int i = 0; i < size; ++i) {
+                h = (h ^ bytes[i]) * 0x01000193u;
+            }
+            return h;
+        }();
+        return cached;
+    }
+
+    static bool isSaveStateValid(const nba::SaveState& s) {
+        if (s.magic != nba::SaveState::kMagicNumber) return false;
+        if (s.version != nba::SaveState::kCurrentVersion) return false;
+
+        const uint32_t pc = s.arm.regs.gpr[15];
+        const uint32_t page = pc >> 24;
+
+        const bool pcMapped =
+            page == 0x00 || page == 0x02 || page == 0x03 || (page >= 0x08 && page <= 0x0D);
+            
+        if (!pcMapped) return false;
+
+        const uint32_t mode = s.arm.regs.cpsr & 0x1Fu;
+
+        const bool modeOk =
+            mode == 0x10 || mode == 0x11 || mode == 0x12 ||
+            mode == 0x13 || mode == 0x17 || mode == 0x1B || mode == 0x1F;
+
+        if (!modeOk) return false;
+        return true;
     }
 
     void importFlash(const juce::File& file) {
@@ -161,10 +210,12 @@ public:
 
         const uint32_t flashSize = static_cast<uint32_t>(flashBytes.getSize());
         const uint32_t stateSize = core_ ? static_cast<uint32_t>(sizeof(nba::SaveState)) : 0u;
+        const uint32_t romFingerprint = computeRomFingerprint();
 
         destData.reset();
         destData.append(&flashSize, sizeof(flashSize));
         destData.append(&stateSize, sizeof(stateSize));
+        destData.append(&romFingerprint, sizeof(romFingerprint));
         destData.append(flashBytes.getData(), flashBytes.getSize());
 
         if (stateSize > 0) {
@@ -183,18 +234,35 @@ public:
         std::memcpy(&flashSize, bytes + 0, sizeof(flashSize));
         std::memcpy(&stateSize, bytes + 4, sizeof(stateSize));
 
-        const size_t total = 8 + flashSize + stateSize;
-        if (total > static_cast<size_t>(sizeInBytes)) return;
+        int headerSize = 0;
+        uint32_t romFingerprint = 0;
+        const size_t v2Total = 12 + flashSize + stateSize;
+        const size_t v1Total = 8 + flashSize + stateSize;
 
-        flashFile_.getFile().replaceWithData(bytes + 8, flashSize);
+        if (static_cast<size_t>(sizeInBytes) == v2Total && sizeInBytes >= 12) {
+            headerSize = 12;
+            std::memcpy(&romFingerprint, bytes + 8, sizeof(romFingerprint));
+        } else if (static_cast<size_t>(sizeInBytes) == v1Total) {
+            headerSize = 8;
+        } else {
+            return;
+        }
+
+        flashFile_.getFile().replaceWithData(bytes + headerSize, flashSize);
         if (flashBackup_) flashBackup_->Reset();
+
+        if (headerSize == 8 || romFingerprint != computeRomFingerprint()) {
+            resetCore();
+            return;
+        }
 
         if (stateSize == sizeof(nba::SaveState)) {
             nba::SaveState state;
-            std::memcpy(&state, bytes + 8 + flashSize, sizeof(state));
-            if (state.magic == nba::SaveState::kMagicNumber) {
+            std::memcpy(&state, bytes + headerSize + flashSize, sizeof(state));
+            if (isSaveStateValid(state)) {
                 if (core_) {
                     core_->LoadState(state);
+                    resetWatchdog();
                 } else {
                     pendingSaveState_ = state;
                 }
@@ -242,6 +310,8 @@ public:
                 const std::vector<SyncEvent>& events) {
         if (!core_) return;
 
+        const uint64_t sinkCountBefore = audioSampleSink_->getBufferReadyCount();
+
         input_.syncToCore(*core_);
 
         // endSerial8 has no busy check, back-to-back calls choke siodata8 before the IRQ read
@@ -280,6 +350,19 @@ public:
 
         audioDevice_->render(apuTempBuffer_, numSamples);
         mixDelayedNoise(buffer, apuTempBuffer_, numSamples);
+
+        const uint64_t sinkCountAfter = audioSampleSink_->getBufferReadyCount();
+        const bool produced = sinkCountAfter != sinkCountBefore;
+
+        if (!watchdogArmed_) {
+            if (produced) watchdogArmed_ = true;
+        } else if (produced) {
+            stalledBlockCount_ = 0;
+        } else if (++stalledBlockCount_ > kWatchdogStallLimitBlocks) {
+            resetCore();
+        }
+
+        lastBufferReadyCount_ = sinkCountAfter;
     }
 
     void setNoiseDelay(double sampleRate, int blockSize) {
