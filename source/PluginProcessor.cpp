@@ -5,6 +5,8 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+#include <cstring>
+
 PluginProcessor::PluginProcessor()
     : AudioProcessor(BusesProperties().withOutput("Main", juce::AudioChannelSet::stereo()))
 {
@@ -129,11 +131,43 @@ void PluginProcessor::buildSyncEvents(int numSamples) {
 
 void PluginProcessor::getStateInformation(juce::MemoryBlock &destData) {
     emulator_.getState(destData);
+
+    uint8_t block[16];
+    for (int t = 0; t < NUM_TRACKS; ++t) {
+        block[t] = static_cast<uint8_t>(patternParams_[t]->get());
+        block[t + 5] = resetParams_[t]->get() ? 1 : 0;
+        block[t + 10] = static_cast<uint8_t>(levelParams_[t]->get());
+    }
+    block[15] = static_cast<uint8_t>(bankParam_->get());
+    destData.append(block, sizeof(block));
 }
 
 void PluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
+    const auto* bytes = static_cast<const uint8_t*>(data);
+    int emuSize = sizeInBytes;
+
+    if (sizeInBytes >= 12 + 16) {
+        uint32_t flashSize = 0;
+        uint32_t stateSize = 0;
+        std::memcpy(&flashSize, bytes + 0, sizeof(flashSize));
+        std::memcpy(&stateSize, bytes + 4, sizeof(stateSize));
+        const uint64_t emuTotal = 12ull + flashSize + stateSize;
+
+        if (static_cast<uint64_t>(sizeInBytes) == emuTotal + 16) {
+            const uint8_t* p = bytes + emuTotal;
+
+            for (int t = 0; t < NUM_TRACKS; ++t) {
+                *patternParams_[t] = p[t];
+                *resetParams_[t] = p[t + 5] != 0;
+                *levelParams_[t] = p[t + 10];
+            }
+            *bankParam_ = p[15];
+            emuSize = static_cast<int>(emuTotal);
+        }
+    }
+
     const juce::ScopedLock sl(getCallbackLock());
-    emulator_.setState(data, sizeInBytes);
+    emulator_.setState(bytes, emuSize);
 }
 
 juce::AudioProcessor * JUCE_CALLTYPE createPluginFilter() {

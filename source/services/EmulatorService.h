@@ -66,6 +66,21 @@ private:
     bool watchdogArmed_ = false;
     static constexpr int kWatchdogStallLimitBlocks = 16;
 
+    bool automationSeeded_ = false;
+    bool reapplyOnSeed_ = false;
+
+    uint8_t shadow_[11] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+    uint8_t lastBank_ = 0;
+    uint8_t lastSlots_[5] {};
+    uint8_t lastLevels_[5] {};
+    uint8_t lastMask_ = 0;
+
+    void resetAutomationSeed(bool reapply = false) {
+        automationSeeded_ = false;
+        reapplyOnSeed_ = reapply;
+        std::memset(shadow_, 0xFF, sizeof(shadow_));
+    }
+
     void initCore() {
         core_ = nba::CreateCore(config_);
         core_->Attach(biosData_);
@@ -81,6 +96,8 @@ private:
 
         nba::ROM rom(std::move(romData), std::move(flash), std::make_unique<nba::GPIO>());
         core_->Attach(std::move(rom));
+
+        resetAutomationSeed();
     }
 
 public:
@@ -121,11 +138,13 @@ public:
         if (pendingSaveState_) {
             core_->LoadState(*pendingSaveState_);
             pendingSaveState_.reset();
+            resetAutomationSeed();
         } else if (!juce::approximatelyEqual(sampleRate, lastSampleRate_) || blockSize != lastBlockSize_) {
             nba::SaveState state;
             core_->CopyState(state);
             state.apu.resolution_old = 0xFF;
             core_->LoadState(state);
+            resetAutomationSeed();
         }
 
         lastSampleRate_ = sampleRate;
@@ -134,10 +153,11 @@ public:
         ppuRenderer_->start();
     }
 
-    void resetCore() {
+    void resetCore(bool reapplyAutomation = false) {
         pendingSaveState_.reset();
         resetWatchdog();
         initCore();
+        reapplyOnSeed_ = reapplyAutomation;
     }
 
     void resetWatchdog() {
@@ -263,8 +283,10 @@ public:
                 if (core_) {
                     core_->LoadState(state);
                     resetWatchdog();
+                    resetAutomationSeed();
                 } else {
                     pendingSaveState_ = state;
+                    resetAutomationSeed();
                 }
             }
         }
@@ -359,7 +381,7 @@ public:
         } else if (produced) {
             stalledBlockCount_ = 0;
         } else if (++stalledBlockCount_ > kWatchdogStallLimitBlocks) {
-            resetCore();
+            resetCore(true);
         }
 
         lastBufferReadyCount_ = sinkCountAfter;
@@ -413,7 +435,70 @@ public:
 
     void setPluginAutomation(uint8_t bank, const uint8_t* slots5, uint8_t resetMask, const uint8_t* levels5) {
         if (!core_) return;
-        core_->SetPluginAutomation(bank, slots5, resetMask, levels5);
-        core_->SetNoiseLevel(levels5[4]);
+
+        if (!automationSeeded_) {
+            lastBank_ = bank;
+            std::memcpy(lastSlots_, slots5, 5);
+            std::memcpy(lastLevels_, levels5, 5);
+            lastMask_ = resetMask;
+
+            core_->SetNoiseLevel(levels5[4]);
+
+            if (reapplyOnSeed_) {
+                shadow_[0] = bank;
+                std::memcpy(&shadow_[1], slots5, 5);
+                shadow_[6] = resetMask;
+                std::memcpy(&shadow_[7], levels5, 4);
+                core_->SetPluginAutomation(shadow_[0], &shadow_[1], shadow_[6], &shadow_[7]);
+            }
+
+            reapplyOnSeed_ = false;
+            automationSeeded_ = true;
+            return;
+        }
+
+        bool dirty = false;
+
+        if (bank != lastBank_) {
+            lastBank_ = bank;
+            shadow_[0] = bank;
+
+            for (int t = 0; t < 5; ++t) {
+                lastSlots_[t] = slots5[t];
+                shadow_[t + 1] = slots5[t];
+            }
+            dirty = true;
+        }
+
+        for (int t = 0; t < 5; ++t) {
+            if (slots5[t] != lastSlots_[t]) {
+                lastSlots_[t] = slots5[t];
+                shadow_[t + 1] = slots5[t];
+                dirty = true;
+            }
+        }
+
+        if (resetMask != lastMask_) {
+            lastMask_ = resetMask;
+            dirty = true;
+        }
+
+        for (int t = 0; t < 4; ++t) {
+            if (levels5[t] != lastLevels_[t]) {
+                lastLevels_[t] = levels5[t];
+                shadow_[t + 7] = levels5[t];
+                dirty = true;
+            }
+        }
+
+        if (levels5[4] != lastLevels_[4]) {
+            lastLevels_[4] = levels5[4];
+            core_->SetNoiseLevel(levels5[4]);
+        }
+
+        if (dirty) {
+            shadow_[6] = resetMask;
+            core_->SetPluginAutomation(shadow_[0], &shadow_[1], shadow_[6], &shadow_[7]);
+        }
     }
 };

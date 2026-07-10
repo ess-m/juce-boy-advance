@@ -5,6 +5,8 @@
  * Refer to the included LICENSE file.
  */
 
+#include <cstring>
+
 #include "bus/bus.hpp"
 
 namespace nba::core {
@@ -51,6 +53,8 @@ void Bus::LoadState(SaveState const& state) {
   last_access = state.bus.last_access;
 
   parallel_internal_cpu_cycle_limit = state.bus.parallel_internal_cpu_cycle_limit;
+
+  std::memset(hw.plugin_automation, 0xFF, sizeof(hw.plugin_automation));
 }
 
 void Bus::CopyState(SaveState& state) {
