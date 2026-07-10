@@ -7,3 +7,4 @@ assets/
 rom/
 bios/
 tmp/
+.env

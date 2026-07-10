@@ -53,10 +53,16 @@ juce_add_binary_data(${PROJECT_NAME}_BinaryData
         ${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/ui-font.otf
 )
 
+if (DEFINED ENV{CI})
+    set(COPY_AFTER_BUILD FALSE)
+else ()
+    set(COPY_AFTER_BUILD TRUE)
+endif ()
+
 juce_add_plugin(${PROJECT_NAME}
     COMPANY_NAME "Lo-Bit Club"
     BUNDLE_ID "com.lobit.fms"
-    COPY_PLUGIN_AFTER_BUILD TRUE
+    COPY_PLUGIN_AFTER_BUILD ${COPY_AFTER_BUILD}
     PLUGIN_MANUFACTURER_CODE LOBT
     PLUGIN_CODE LJBA
     FORMATS Standalone AU VST3 CLAP
@@ -114,3 +120,14 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
     ${PROJECT_NAME}_BinaryData
 )
+
+if (DEFINED ENV{CI})
+    set(env_file "${PROJECT_SOURCE_DIR}/.env")
+    message("Writing ENV file for CI: ${env_file}")
+
+    file(WRITE  "${env_file}" "PROJECT_NAME=${PROJECT_NAME}\n")
+    file(APPEND "${env_file}" "PRODUCT_NAME=FMS\n")
+    file(APPEND "${env_file}" "VERSION=${PROJECT_VERSION}\n")
+    file(APPEND "${env_file}" "BUNDLE_ID=com.lobit.fms\n")
+    file(APPEND "${env_file}" "COMPANY_NAME=Lo-Bit Club\n")
+endif ()

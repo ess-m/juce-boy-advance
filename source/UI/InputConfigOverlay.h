@@ -164,7 +164,7 @@ private:
         });
 
         for (const auto& [joyIdx, name] : controllers) {
-            menu.addItem(name, true, false, [this, joyIdx] {
+            menu.addItem(name, true, false, [this, joyIdx = joyIdx] {
                 input_.selectController(joyIdx);
                 controllerSelector_.repaint();
             });
