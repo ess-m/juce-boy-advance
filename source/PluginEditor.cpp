@@ -197,7 +197,7 @@ void PluginEditor::resized() {
 
 bool PluginEditor::keyStateChanged(bool /*isKeyDown*/) {
     processor_.getEmulator().getInput().pollKeyboard();
-    return true;
+    return !juce::ModifierKeys::currentModifiers.isCommandDown();
 }
 
 void PluginEditor::parentHierarchyChanged() {
