@@ -34,6 +34,7 @@ struct Core final : CoreBase {
   void SendSerial8(u8 value) override;
   void SetPluginAutomation(u8 bank, u8 const* slots5, u8 resetMask, u8 const* levels5) override;
   void SetNoiseLevel(u8 level) override;
+  void SetHostEnvironment(u8 env) override;
   void Run(int cycles) override;
 
   auto GetROM() -> ROM& override;

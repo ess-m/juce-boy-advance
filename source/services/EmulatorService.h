@@ -66,6 +66,8 @@ private:
     bool watchdogArmed_ = false;
     static constexpr int kWatchdogStallLimitBlocks = 16;
 
+    bool hostIsPlugin_ = false;
+
     bool automationSeeded_ = false;
     bool reapplyOnSeed_ = false;
 
@@ -97,6 +99,7 @@ private:
         nba::ROM rom(std::move(romData), std::move(flash), std::make_unique<nba::GPIO>());
         core_->Attach(std::move(rom));
 
+        core_->SetHostEnvironment(hostIsPlugin_ ? 1 : 0);
         resetAutomationSeed();
     }
 
@@ -428,6 +431,9 @@ public:
 
         noiseDelayWrite_ = w;
     }
+
+    // Must be set before the first prepare(); the ROM reads it once at boot.
+    void setHostIsPlugin(bool isPlugin) { hostIsPlugin_ = isPlugin; }
 
     InputService& getInput() { return input_; }
     VideoService& getVideo() { return video_; }

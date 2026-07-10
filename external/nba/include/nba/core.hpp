@@ -51,6 +51,7 @@ struct CoreBase {
   
   virtual void SetPluginAutomation(u8 bank, u8 const* slots5, u8 resetMask, u8 const* levels5) = 0;
   virtual void SetNoiseLevel(u8 level) = 0;
+  virtual void SetHostEnvironment(u8 env) = 0;
   virtual void Run(int cycles) = 0;
 
   virtual auto GetROM() -> ROM& = 0;

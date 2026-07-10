@@ -211,6 +211,7 @@ auto Bus::Hardware::ReadByte(u32 address) ->  u8 {
     case 0x04FFC108: return plugin_automation[8];  // FM 2 level
     case 0x04FFC109: return plugin_automation[9];  // FM 3 level
     case 0x04FFC10A: return plugin_automation[10]; // FM 4 level
+    case 0x04FFC10B: return plugin_host_env;
   }
 
   return bus->ReadOpenBus(address);

@@ -107,6 +107,9 @@ struct Bus {
     // [0] bank, [1..5] slot/track, [6] reset-on-load mask, [7..10] FM track level
     u8 plugin_automation[11] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
+    // 1 = DAW, 0 = standalone, 0xFF = none
+    u8 plugin_host_env = 0xFF;
+
     auto ReadByte(u32 address) ->  u8;
     auto ReadHalf(u32 address) -> u16;
     auto ReadWord(u32 address) -> u32;

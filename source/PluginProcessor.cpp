@@ -49,6 +49,8 @@ PluginProcessor::PluginProcessor()
         0, 7, 0
     );
     addParameter(bankParam_);
+
+    emulator_.setHostIsPlugin(wrapperType != wrapperType_Standalone);
 }
 
 PluginProcessor::~PluginProcessor() = default;

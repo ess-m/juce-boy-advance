@@ -98,6 +98,10 @@ void Core::SetNoiseLevel(u8 level) {
   apu.SetNoiseLevel(level);
 }
 
+void Core::SetHostEnvironment(u8 env) {
+  bus.hw.plugin_host_env = env;
+}
+
 void Core::Run(int cycles) {
   using HaltControl = Bus::Hardware::HaltControl;
 
