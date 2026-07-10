@@ -59,6 +59,15 @@ else ()
     set(COPY_AFTER_BUILD TRUE)
 endif ()
 
+if (APPLE)
+    set(IconFile "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon-macos.png")
+else ()
+    set(IconFile "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon-windows.png")
+endif ()
+if (EXISTS "${IconFile}")
+    set(PluginIcon ICON_BIG "${IconFile}")
+endif ()
+
 juce_add_plugin(${PROJECT_NAME}
     COMPANY_NAME "Lo-Bit Club"
     BUNDLE_ID "com.lobit.fms"
@@ -73,6 +82,7 @@ juce_add_plugin(${PROJECT_NAME}
     IS_MIDI_EFFECT FALSE
     VST3_CATEGORIES Instrument Synth
     AU_MAIN_TYPE kAudioUnitType_MusicDevice
+    ${PluginIcon}
 )
 
 clap_juce_extensions_plugin(TARGET ${PROJECT_NAME}
