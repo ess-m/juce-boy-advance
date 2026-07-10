@@ -27,7 +27,8 @@ void APU::LoadState(SaveState const& state) {
     fifo_pipe[i].size = state.apu.fifo[i].pipe.size;
   }
 
-  resolution_old = state.apu.resolution_old;
+  resampler->SetSampleRates(mmio.bias.GetSampleRate(), config->audio_dev->GetSampleRate());
+  resolution_old = mmio.bias.resolution;
 
   // We are simply resetting the MP2K mixer for now,
   // there probably is no need to do complicated (de)serialization.

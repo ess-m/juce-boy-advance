@@ -59,7 +59,7 @@ void APU::Reset() {
 
   using Interpolation = Config::Audio::Interpolation;
 
-  buffer = std::make_shared<StereoRingBuffer<float>>(audio_dev->GetBlockSize() * 4, true);
+  buffer = std::make_shared<StereoRingBuffer<float>>(std::max(8192, audio_dev->GetBlockSize() * 4), true);
 
   switch(config->audio.interpolation) {
     case Interpolation::Cosine:

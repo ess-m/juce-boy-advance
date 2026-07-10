@@ -142,7 +142,6 @@ public:
         } else if (!juce::approximatelyEqual(sampleRate, lastSampleRate_) || blockSize != lastBlockSize_) {
             nba::SaveState state;
             core_->CopyState(state);
-            state.apu.resolution_old = 0xFF;
             core_->LoadState(state);
             resetAutomationSeed();
         }

@@ -20,33 +20,13 @@ public:
     using ThemeProvider = std::function<ThemeColors()>;
 
     AudioConfigOverlay() {
-        sampleRateSelector_.setTextProvider([this] {
-            const int sr = static_cast<int>(getCurrentSampleRate());
-            return sr > 0 ? juce::String(sr) : juce::String("—");
-        });
-
-        sampleRateSelector_.setOnClick([this] { showSampleRateMenu(); });
-        sampleRateSelector_.setJustification(juce::Justification::right);
-        sampleRateSelector_.place(280, 45, 200, 18);
-        addAndMakeVisible(sampleRateSelector_);
-
-        bufferSizeSelector_.setTextProvider([this] {
-            const int bs = getCurrentBufferSize();
-            return bs > 0 ? juce::String(bs) : juce::String("—");
-        });
-
-        bufferSizeSelector_.setOnClick([this] { showBufferSizeMenu(); });
-        bufferSizeSelector_.setJustification(juce::Justification::right);
-        bufferSizeSelector_.place(280, 70, 200, 18);
-        addAndMakeVisible(bufferSizeSelector_);
-
         deviceSelector_.setTextProvider([this] {
             return getCurrentDeviceName().upToFirstOccurrenceOf("(", false, false);
         });
 
         deviceSelector_.setOnClick([this] { showDeviceMenu(); });
         deviceSelector_.setJustification(juce::Justification::right);
-        deviceSelector_.place(280, 95, 200, 18);
+        deviceSelector_.place(280, 45, 200, 18);
         addAndMakeVisible(deviceSelector_);
 
         backButton_.setButtonCallback([this] { hide(); });
@@ -84,8 +64,6 @@ public:
 
     void setThemeProvider(ThemeProvider cb) {
         themeProvider_ = cb;
-        sampleRateSelector_.setThemeProvider(themeProvider_);
-        bufferSizeSelector_.setThemeProvider(themeProvider_);
         deviceSelector_.setThemeProvider(themeProvider_);
         backButton_.setThemeProvider(themeProvider_);
         popupLook_.setThemeProvider(themeProvider_);
@@ -99,8 +77,6 @@ public:
 private:
     ThemeProvider themeProvider_;
 
-    MenuLabel sampleRateSelector_;
-    MenuLabel bufferSizeSelector_;
     MenuLabel deviceSelector_;
 
     PopupLook popupLook_;
@@ -148,60 +124,22 @@ private:
         return d != nullptr ? d->getName() : juce::String("None");
     }
 
-    template <typename Mutator>
-    void applySetup(Mutator&& mutator) {
+    void setOutputDevice(const juce::String& name) {
         auto* dm = getDeviceManager();
         if (dm == nullptr) return;
-        juce::AudioDeviceManager::AudioDeviceSetup setup;
-        dm->getAudioDeviceSetup(setup);
-        mutator(setup);
-        dm->setAudioDeviceSetup(setup, true);
-    }
 
-    void showSampleRateMenu() {
-        auto* d = getDevice();
-        if (d == nullptr) return;
+        juce::AudioDeviceManager::AudioDeviceSetup previous;
+        dm->getAudioDeviceSetup(previous);
 
-        juce::PopupMenu menu;
-        menu.setLookAndFeel(&popupLook_);
+        auto setup = previous;
+        setup.outputDeviceName = name;
+        setup.sampleRate = 0;
+        setup.bufferSize = 0;
 
-        for (double sr : d->getAvailableSampleRates()) {
-            menu.addItem(juce::String(static_cast<int>(sr)), true, false,
-                [this, sr] {
-                    applySetup([sr](auto& s) { s.sampleRate = sr; });
-                    sampleRateSelector_.repaint();
-                }
-            );
+        if (dm->setAudioDeviceSetup(setup, true).isNotEmpty()) {
+            dm->setAudioDeviceSetup(previous, true);
         }
-
-        menu.showMenuAsync(
-            juce::PopupMenu::Options()
-                .withParentComponent(this)
-                .withMousePosition());
-    }
-
-    void showBufferSizeMenu() {
-        auto* d = getDevice();
-        if (d == nullptr) return;
-
-        const auto available = d->getAvailableBufferSizes();
-
-        juce::PopupMenu menu;
-        menu.setLookAndFeel(&popupLook_);
-
-        for (int bs : { 32, 64, 128, 256, 512, 1024 }) {
-            if (!available.contains(bs)) continue;
-            menu.addItem(juce::String(bs), true, false,
-                [this, bs] {
-                    applySetup([bs](auto& s) { s.bufferSize = bs; });
-                    bufferSizeSelector_.repaint();
-                });
-        }
-
-        menu.showMenuAsync(
-            juce::PopupMenu::Options()
-                .withParentComponent(this)
-                .withMousePosition());
+        repaint();
     }
 
     void showDeviceMenu() {
@@ -218,11 +156,7 @@ private:
         menu.setLookAndFeel(&popupLook_);
 
         for (const auto& name : type->getDeviceNames(false /* output */)) {
-            menu.addItem(name, true, false,
-                [this, name] {
-                    applySetup([&name](auto& s) { s.outputDeviceName = name; });
-                    deviceSelector_.repaint();
-                });
+            menu.addItem(name, true, false, [this, name] { setOutputDevice(name); });
         }
 
         menu.showMenuAsync(
@@ -239,9 +173,14 @@ private:
 
         g.fillRect(0, 25, 480, 1);
 
-        g.drawText("Sample rate",   0, 45,  200, 18, juce::Justification::left);
-        g.drawText("Buffer size",   0, 70, 200, 18, juce::Justification::left);
-        g.drawText("Output device", 0, 95, 200, 18, juce::Justification::left);
+        g.drawText("Output device", 0, 45, 200, 18, juce::Justification::left);
+        g.drawText("Sample rate",   0, 70, 200, 18, juce::Justification::left);
+        g.drawText("Buffer size",   0, 95, 200, 18, juce::Justification::left);
+
+        const auto value = [](int v) { return v > 0 ? juce::String(v) : juce::String("—"); };
+
+        g.drawText(value(static_cast<int>(getCurrentSampleRate())), 280, 70, 200, 18, juce::Justification::right);
+        g.drawText(value(getCurrentBufferSize()), 280, 95, 200, 18, juce::Justification::right);
     }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioConfigOverlay)
