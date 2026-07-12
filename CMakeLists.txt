@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.25)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "" FORCE)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-project(FMS VERSION 0.1.0)
+project(FMS VERSION 0.9.0)
 
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 
@@ -59,6 +59,17 @@ else ()
     set(COPY_AFTER_BUILD TRUE)
 endif ()
 
+option(BUILD_DEMO OFF)
+if (BUILD_DEMO)
+    set(ProductName "FMS Demo")
+    set(BundleId "com.lobit.fms.demo")
+    set(PluginCode LJBD)
+else ()
+    set(ProductName "FMS")
+    set(BundleId "com.lobit.fms")
+    set(PluginCode LJBA)
+endif ()
+
 if (APPLE)
     set(IconFile "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon-macos.png")
 else ()
@@ -70,12 +81,12 @@ endif ()
 
 juce_add_plugin(${PROJECT_NAME}
     COMPANY_NAME "Lo-Bit Club"
-    BUNDLE_ID "com.lobit.fms"
+    BUNDLE_ID "${BundleId}"
     COPY_PLUGIN_AFTER_BUILD ${COPY_AFTER_BUILD}
     PLUGIN_MANUFACTURER_CODE LOBT
-    PLUGIN_CODE LJBA
+    PLUGIN_CODE ${PluginCode}
     FORMATS Standalone AU VST3 CLAP
-    PRODUCT_NAME "FMS"
+    PRODUCT_NAME "${ProductName}"
     IS_SYNTH TRUE
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT FALSE
@@ -86,7 +97,7 @@ juce_add_plugin(${PROJECT_NAME}
 )
 
 clap_juce_extensions_plugin(TARGET ${PROJECT_NAME}
-    CLAP_ID "com.lobit.fms"
+    CLAP_ID "${BundleId}"
     CLAP_FEATURES instrument synthesizer
 )
 
@@ -136,8 +147,8 @@ if (DEFINED ENV{CI})
     message("Writing ENV file for CI: ${env_file}")
 
     file(WRITE  "${env_file}" "PROJECT_NAME=${PROJECT_NAME}\n")
-    file(APPEND "${env_file}" "PRODUCT_NAME=FMS\n")
+    file(APPEND "${env_file}" "PRODUCT_NAME=${ProductName}\n")
     file(APPEND "${env_file}" "VERSION=${PROJECT_VERSION}\n")
-    file(APPEND "${env_file}" "BUNDLE_ID=com.lobit.fms\n")
+    file(APPEND "${env_file}" "BUNDLE_ID=${BundleId}\n")
     file(APPEND "${env_file}" "COMPANY_NAME=Lo-Bit Club\n")
 endif ()
