@@ -7,11 +7,11 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <nba/device/audio_sample_sink.hpp>
 
+#include <cmath>
 #include <vector>
 
 class PluginAudioSampleSink : public nba::AudioSampleSink {
 public:
-    static constexpr int RING_SIZE = 4096;
     static constexpr double ROM_SAMPLE_RATE = 65536.0;
 
     bool IsActive() const override { return active_; }
@@ -22,26 +22,35 @@ public:
         for (int i = 0; i < count; ++i) {
             ringL_[static_cast<size_t>(writeIdx_)] = static_cast<float>(left[i]) / 128.0f;
             ringR_[static_cast<size_t>(writeIdx_)] = static_cast<float>(right[i]) / 128.0f;
-            writeIdx_ = (writeIdx_ + 1) % RING_SIZE;
+            writeIdx_ = (writeIdx_ + 1) % ringSize_;
         }
         ++bufferReadyCount_;
     }
 
-    void prepare(double hostSampleRate, int /*blockSize*/) {
+    void prepare(double hostSampleRate, int blockSize) {
         speedRatio_ = ROM_SAMPLE_RATE / hostSampleRate;
+
+        const int maxInputPerBlock =
+            static_cast<int>(std::ceil(blockSize * speedRatio_)) + 8;
+
+        scratchSize_ = maxInputPerBlock + 16;
+        ringSize_    = juce::jmax(4096, maxInputPerBlock * 4);
+
         interpL_.reset();
         interpR_.reset();
         writeIdx_ = 0;
         readIdx_ = 0;
-        ringL_.assign(RING_SIZE, 0.0f);
-        ringR_.assign(RING_SIZE, 0.0f);
-        scratchL_.assign(RING_SIZE, 0.0f);
-        scratchR_.assign(RING_SIZE, 0.0f);
+        ringL_.assign(static_cast<size_t>(ringSize_), 0.0f);
+        ringR_.assign(static_cast<size_t>(ringSize_), 0.0f);
+        scratchL_.assign(static_cast<size_t>(scratchSize_), 0.0f);
+        scratchR_.assign(static_cast<size_t>(scratchSize_), 0.0f);
         active_ = true;
     }
 
     void render(juce::AudioBuffer<float>& buffer, int numSamples) {
-        const int needed = static_cast<int>(std::ceil(numSamples * speedRatio_)) + 8;
+        const int needed = juce::jmin(
+            scratchSize_,
+            static_cast<int>(std::ceil(numSamples * speedRatio_)) + 8);
         const int available = readableSamples();
         const int toCopy = juce::jmin(needed, available);
 
@@ -65,28 +74,31 @@ public:
 private:
     int readableSamples() const {
         const int diff = writeIdx_ - readIdx_;
-        return diff >= 0 ? diff : diff + RING_SIZE;
+        return diff >= 0 ? diff : diff + ringSize_;
     }
 
     void copyOutOfRing(float* dstL, float* dstR, int count) {
         for (int i = 0; i < count; ++i) {
             dstL[i] = ringL_[static_cast<size_t>(readIdx_)];
             dstR[i] = ringR_[static_cast<size_t>(readIdx_)];
-            readIdx_ = (readIdx_ + 1) % RING_SIZE;
+            readIdx_ = (readIdx_ + 1) % ringSize_;
         }
     }
 
     void rewindRing(int count) {
-        readIdx_ = (readIdx_ - count + RING_SIZE) % RING_SIZE;
+        readIdx_ = (readIdx_ - count + ringSize_) % ringSize_;
     }
 
     bool active_ = false;
     double speedRatio_ = 1.0;
 
-    std::vector<float> ringL_ { std::vector<float>(RING_SIZE, 0.0f) };
-    std::vector<float> ringR_ { std::vector<float>(RING_SIZE, 0.0f) };
-    std::vector<float> scratchL_ { std::vector<float>(RING_SIZE, 0.0f) };
-    std::vector<float> scratchR_ { std::vector<float>(RING_SIZE, 0.0f) };
+    int ringSize_ = 4096;
+    int scratchSize_ = 4096;
+
+    std::vector<float> ringL_ { std::vector<float>(static_cast<size_t>(ringSize_), 0.0f) };
+    std::vector<float> ringR_ { std::vector<float>(static_cast<size_t>(ringSize_), 0.0f) };
+    std::vector<float> scratchL_ { std::vector<float>(static_cast<size_t>(scratchSize_), 0.0f) };
+    std::vector<float> scratchR_ { std::vector<float>(static_cast<size_t>(scratchSize_), 0.0f) };
 
     int writeIdx_ = 0;
     int readIdx_ = 0;
