@@ -25,6 +25,7 @@
 #include "adapters/PluginAudioSampleSink.h"
 #include "adapters/WorkerPpuRenderer.h"
 
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -142,10 +143,10 @@ public:
             core_->LoadState(*pendingSaveState_);
             pendingSaveState_.reset();
             resetAutomationSeed();
-        } else if (!juce::approximatelyEqual(sampleRate, lastSampleRate_) || blockSize != lastBlockSize_) {
-            nba::SaveState state;
-            core_->CopyState(state);
-            core_->LoadState(state);
+        } else if (!juce::approximatelyEqual(sampleRate, lastSampleRate_) || blockSize != lastBlockSize_) {            
+            auto state = std::make_unique<nba::SaveState>();
+            core_->CopyState(*state);
+            core_->LoadState(*state);
             resetAutomationSeed();
         }
 
@@ -241,9 +242,9 @@ public:
         destData.append(flashBytes.getData(), flashBytes.getSize());
 
         if (stateSize > 0) {
-            nba::SaveState state;
-            core_->CopyState(state);
-            destData.append(&state, sizeof(state));
+            auto state = std::make_unique<nba::SaveState>();  // ~515 KB — never on the stack
+            core_->CopyState(*state);
+            destData.append(state.get(), sizeof(*state));
         }
     }
 
@@ -279,15 +280,15 @@ public:
         }
 
         if (stateSize == sizeof(nba::SaveState)) {
-            nba::SaveState state;
-            std::memcpy(&state, bytes + headerSize + flashSize, sizeof(state));
-            if (isSaveStateValid(state)) {
+            auto state = std::make_unique<nba::SaveState>();
+            std::memcpy(state.get(), bytes + headerSize + flashSize, sizeof(*state));
+            if (isSaveStateValid(*state)) {
                 if (core_) {
-                    core_->LoadState(state);
+                    core_->LoadState(*state);
                     resetWatchdog();
                     resetAutomationSeed();
                 } else {
-                    pendingSaveState_ = state;
+                    pendingSaveState_ = *state;
                     resetAutomationSeed();
                 }
             }
