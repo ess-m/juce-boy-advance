@@ -125,6 +125,7 @@ public:
 
     ~EmulatorService() {
         ppuRenderer_->stop();
+        core_.reset();
     }
 
     void prepare(double sampleRate, int blockSize) {

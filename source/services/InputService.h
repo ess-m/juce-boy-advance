@@ -37,6 +37,11 @@ private:
 
     juce::SharedResourcePointer<UserSettings> settings_;
 
+    static bool ensureSdlGameControllerSubsystem() {
+        static const bool ok = (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) == 0);
+        return ok;
+    }
+
     void saveSettings() {
         auto& f = settings_->file();
         for (uint8_t i = 0; i < kKeyCount; ++i) {
@@ -158,7 +163,7 @@ public:
         // defaults
         loadSettings();
 
-        if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) == 0) {
+        if (ensureSdlGameControllerSubsystem()) {
             sdlInitialized_ = true;
 
             // load saved settings
@@ -179,8 +184,10 @@ public:
 
     ~InputService() override {
         stopTimer();
-        if (controller_) SDL_GameControllerClose(controller_);
-        if (sdlInitialized_) SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
+        if (controller_) {
+            SDL_GameControllerClose(controller_);
+            controller_ = nullptr;
+        }
     }
 
     void pollKeyboard() {
