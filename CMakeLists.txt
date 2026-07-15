@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.25)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "" FORCE)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-project(FMS VERSION 0.9.1)
+project(FMS VERSION 0.9.2)
 
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 
@@ -18,9 +18,9 @@ include (CPM)
 
 CPMAddPackage(
         NAME SDL2
-        VERSION 2.28.5
+        VERSION 2.32.10
         GITHUB_REPOSITORY libsdl-org/SDL
-        GIT_TAG release-2.28.5
+        GIT_TAG release-2.32.10
         OPTIONS
         "SDL_SHARED OFF"
         "SDL_STATIC ON"
