@@ -43,6 +43,25 @@ private:
 
     PopupLook popupLook_;
 
+    // experimental fix for windows sleep mode
+    struct AudioResumeWatchdog : juce::Timer {
+        PluginProcessor& proc;
+        uint64_t lastCount = 0;
+
+        int stalledSecs = 0;
+        explicit AudioResumeWatchdog(PluginProcessor& p) : proc(p) { startTimer(1000); }
+
+        void timerCallback() override {
+            auto* holder = juce::StandalonePluginHolder::getInstance();
+            if (holder == nullptr) return; // running as plugin
+            
+            const uint64_t now = proc.getEmulator().getBufferReadyCount();
+            if (now != lastCount) { lastCount = now; stalledSecs = 0; return; }
+            if (++stalledSecs == 3) holder->deviceManager.restartLastAudioDevice();
+        }
+    };
+    AudioResumeWatchdog audioWatchdog_ { processor_ };
+
     void onVBlank() {
         repaint();
         syncTitlebarColor();

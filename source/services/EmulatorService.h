@@ -440,6 +440,10 @@ public:
     InputService& getInput() { return input_; }
     VideoService& getVideo() { return video_; }
 
+    uint64_t getBufferReadyCount() const {
+        return audioSampleSink_ ? audioSampleSink_->getBufferReadyCount() : 0;
+    }
+
     void setPluginAutomation(uint8_t bank, const uint8_t* slots5, uint8_t resetMask, const uint8_t* levels5) {
         if (!core_) return;
 
