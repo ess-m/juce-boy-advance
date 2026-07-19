@@ -203,13 +203,20 @@ bool PluginEditor::keyStateChanged(bool /*isKeyDown*/) {
 void PluginEditor::parentHierarchyChanged() {
     AudioProcessorEditor::parentHierarchyChanged();
 
-    #if JUCE_STANDALONE_APPLICATION && !DEBUG
+    #if JUCE_STANDALONE_APPLICATION
     static bool windowStyled = false;
 
     if (!windowStyled) {
         if (auto* topLevel = juce::TopLevelWindow::getTopLevelWindow(0)) {
-            topLevel->setUsingNativeTitleBar(true);
             windowStyled = true;
+
+            #if ! JUCE_MAC
+            if (auto* doc = dynamic_cast<juce::DocumentWindow*>(topLevel))
+                doc->setTitleBarButtonsRequired(juce::DocumentWindow::allButtons, false);
+            #endif
+
+            #if ! DEBUG
+            topLevel->setUsingNativeTitleBar(true);
 
             #if JUCE_MAC
             juce::MessageManager::callAsync([safeThis = SafePointer(this), this] {
@@ -221,6 +228,7 @@ void PluginEditor::parentHierarchyChanged() {
                     }
                 }
             });
+            #endif
             #endif
         }
     }
