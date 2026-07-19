@@ -42,6 +42,18 @@ private:
         return ok;
     }
 
+    static int arrowKeyFor(nba::Key key) {
+        if (key == nba::Key::Up)    return juce::KeyPress::upKey;
+        if (key == nba::Key::Down)  return juce::KeyPress::downKey;
+        if (key == nba::Key::Left)  return juce::KeyPress::leftKey;
+        if (key == nba::Key::Right) return juce::KeyPress::rightKey;
+        return -1;
+    }
+
+    static bool isDown(int keyCode) {
+        return keyCode >= 0 && juce::KeyPress::isKeyCurrentlyDown(keyCode);
+    }
+
     void saveSettings() {
         auto& f = settings_->file();
         for (uint8_t i = 0; i < kKeyCount; ++i) {
@@ -191,9 +203,11 @@ public:
     }
 
     void pollKeyboard() {
-        for (size_t i = 0; i < kKeyCount; ++i) {
-            const int code = keyboardMap_[i];
-            const bool down = code >= 0 && juce::KeyPress::isKeyCurrentlyDown(code);
+        for (size_t i = 0; i < kKeyCount; ++i) {            
+            const bool down = 
+                isDown(keyboardMap_[i]) || 
+                isDown(arrowKeyFor(static_cast<nba::Key>(i)));
+                
             keyboard_[i].store(down, std::memory_order_relaxed);
         }
     }
