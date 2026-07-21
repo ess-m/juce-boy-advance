@@ -160,7 +160,14 @@ public:
     void resetCore(bool reapplyAutomation = false) {
         pendingSaveState_.reset();
         resetWatchdog();
-        initCore();
+
+        if (lastSampleRate_ > 0.0) {
+            initCore();
+        } else {
+            core_.reset();
+            flashBackup_ = nullptr;
+        }
+
         reapplyOnSeed_ = reapplyAutomation;
     }
 

@@ -16,7 +16,7 @@ namespace nba {
 
 struct SaveState {
   static constexpr u32 kMagicNumber = 0x5353424E; // NBSS
-  static constexpr u32 kCurrentVersion = 10;
+  static constexpr u32 kCurrentVersion = 11;
 
   u32 magic;
   u32 version;
@@ -188,9 +188,13 @@ struct SaveState {
         u8 frequency_shift;
         u8 frequency_ratio;
         u8 width;
+        u16 lfsr;
+        s8 sample;
+        s32 skip_count;
       } noise;
 
-      u32 soundcnt;
+      u32 soundcnt;   // SOUNDCNT_L + SOUNDCNT_H (bytes 0-3)
+      u8 soundcnt_x;  // SOUNDCNT_X: master_enable (byte 4)
       u16 soundbias;
     } io;
 

@@ -13,6 +13,7 @@ namespace nba::core {
 
 void APU::LoadState(SaveState const& state) {
   mmio.soundcnt.WriteWord(state.apu.io.soundcnt);
+  mmio.soundcnt.Write(4, state.apu.io.soundcnt_x);
   mmio.bias.WriteHalf(state.apu.io.soundbias);
 
   mmio.psg1.LoadState(state.apu.io.quad[0]);
@@ -37,6 +38,7 @@ void APU::LoadState(SaveState const& state) {
 
 void APU::CopyState(SaveState& state) {
   state.apu.io.soundcnt = mmio.soundcnt.ReadWord();
+  state.apu.io.soundcnt_x = mmio.soundcnt.Read(4);
   state.apu.io.soundbias = mmio.bias.ReadHalf();
 
   mmio.psg1.CopyState(state.apu.io.quad[0]);
@@ -167,6 +169,9 @@ void NoiseChannel::LoadState(SaveState::APU::IO::NoiseChannel const& state) {
   frequency_shift = state.frequency_shift;
   frequency_ratio = state.frequency_ratio;
   width = state.width;
+  lfsr = state.lfsr;
+  sample = state.sample;
+  skip_count = state.skip_count;
   event = scheduler.GetEventByUID(state.event_uid);
 }
 
@@ -177,6 +182,9 @@ void NoiseChannel::CopyState(SaveState::APU::IO::NoiseChannel& state) {
   state.frequency_shift = frequency_shift;
   state.frequency_ratio = frequency_ratio;
   state.width = width;
+  state.lfsr = lfsr;
+  state.sample = sample;
+  state.skip_count = skip_count;
   state.event_uid = GetEventUID(event);
 }
 

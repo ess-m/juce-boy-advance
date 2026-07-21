@@ -32,15 +32,20 @@ struct JuceAudioDevice : nba::AudioDevice {
     void render(juce::AudioBuffer<float>& buffer, int numSamples) {
         if (!callback_ || !userData_) return;
 
-        if (static_cast<int>(tempBuffer_.size()) < numSamples * 2) {
-            tempBuffer_.resize(static_cast<size_t>(numSamples * 2));
-        }
-        callback_(userData_, tempBuffer_.data(), numSamples * 2 * static_cast<int>(sizeof(int16_t)));
+
+        const int count = juce::jmin(
+            numSamples,
+            static_cast<int>(tempBuffer_.size()) / 2,
+            buffer.getNumSamples()
+        );
+        if (count <= 0) return;
+
+        callback_(userData_, tempBuffer_.data(), count * 2 * static_cast<int>(sizeof(int16_t)));
 
         auto* left = buffer.getWritePointer(0);
         auto* right = buffer.getWritePointer(1);
 
-        for (int i = 0; i < numSamples; ++i) {
+        for (int i = 0; i < count; ++i) {
             left[i] = static_cast<float>(tempBuffer_[static_cast<size_t>(i * 2)]) / 32768.0f;
             right[i] = static_cast<float>(tempBuffer_[static_cast<size_t>(i * 2 + 1)]) / 32768.0f;
         }
